@@ -157,8 +157,9 @@ export default function Home() {
                 type="submit"
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.05 }}
-                className={`absolute right-3 top-1/2 transform -translate-y-1/2 rounded-full p-2 w-10 h-10 flex items-center justify-center ${inputValue.trim() ? 'bg-red-900 text-white' : 'bg-red-100 text-red-300'} transition-colors`}
+                className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-10 h-10 flex items-center justify-center ${inputValue.trim() ? 'bg-red-900 text-white' : 'bg-red-100 text-red-300'} transition-colors`}
                 disabled={!inputValue.trim()}
+                style={{ lineHeight: 1 }} // Ensure proper centering
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
