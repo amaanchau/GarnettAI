@@ -165,7 +165,7 @@ export default function AnexPage() {
 
             <main className="flex-grow flex flex-col items-center px-4">
                 {/* Compact search section - positioned higher */}
-                <div className="w-full max-w-2xl mx-auto mt-8 relative" ref={searchContainerRef}>
+                <div className="w-full max-w-2xl mx-auto mt-2 relative" ref={searchContainerRef}>
                     <div className="relative">
                         <input
                             type="text"

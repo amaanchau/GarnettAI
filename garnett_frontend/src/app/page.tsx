@@ -157,7 +157,7 @@ export default function Home() {
                 type="submit"
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.05 }}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-10 h-10 flex items-center justify-center ${inputValue.trim() ? 'bg-red-900 text-white' : 'bg-red-100 text-red-300'} transition-colors`}
+                className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-10 h-10 flex items-center justify-center ${inputValue.trim() ? 'bg-red-300 text-white' : 'bg-red-100 text-red-300'} transition-colors`}
                 disabled={!inputValue.trim()}
                 style={{ lineHeight: 1 }} // Ensure proper centering
               >
