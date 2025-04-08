@@ -36,7 +36,7 @@ export default function AnexPage() {
     const [professors, setProfessors] = useState<Professor[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const searchContainerRef = useRef(null);
+    const searchContainerRef = useRef<HTMLDivElement | null>(null);
 
     // Fetch data on component mount
     useEffect(() => {
@@ -77,8 +77,8 @@ export default function AnexPage() {
 
     // Handle clicking outside of search results to close dropdown
     useEffect(() => {
-        function handleClickOutside(event) {
-            if (searchContainerRef.current && !searchContainerRef.current.contains(event.target)) {
+        function handleClickOutside(event: MouseEvent) {
+            if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
                 setShowResults(false);
             }
         }
@@ -145,14 +145,14 @@ export default function AnexPage() {
         setShowResults(results.length > 0);
     }, [searchTerm, courses, professors]);
 
-    const handleSearchChange = (e) => {
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
         if (e.target.value.length >= 2) {
             setShowResults(true);
         }
     };
 
-    const handleResultClick = (result) => {
+    const handleResultClick = (result: SearchResult) => {
         // In a real app, you would navigate to the detail page for this result
         console.log('Selected:', result);
         setSearchTerm(result.displayText);
