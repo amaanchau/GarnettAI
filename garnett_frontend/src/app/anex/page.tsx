@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Inter } from 'next/font/google';
 import Navbar from "@/components/Navbar";
+import GpaLineGraph from "@/components/GpaLineGraph";
+import CourseDataTable from "@/components/CourseDataTable";
 import { motion, AnimatePresence } from 'framer-motion';
 
 const inter = Inter({
@@ -10,22 +12,17 @@ const inter = Inter({
     display: 'swap',
 });
 
-// Course/professor types
+// Course type
 interface Course {
     code: string;
     name?: string;
 }
 
-interface Professor {
-    name: string;
-    department: string;
-}
-
 interface SearchResult {
     id: string;
-    type: 'course' | 'professor';
+    type: 'course';
     displayText: string;
-    original: Course | Professor;
+    original: Course;
 }
 
 export default function AnexPage() {
@@ -33,40 +30,31 @@ export default function AnexPage() {
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [showResults, setShowResults] = useState(false);
     const [courses, setCourses] = useState<Course[]>([]);
-    const [professors, setProfessors] = useState<Professor[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const searchContainerRef = useRef<HTMLDivElement | null>(null);
+    const [gpaData, setGpaData] = useState([]);
+    const [courseData, setCourseData] = useState([]);
 
-    // Fetch data on component mount
+    // Fetch courses data on component mount
     useEffect(() => {
         async function fetchData() {
             try {
                 setLoading(true);
                 setError(null);
 
-                // Fetch both courses and professors in parallel
-                const [coursesResponse, professorsResponse] = await Promise.all([
-                    fetch('/api/fetch_courses'),
-                    fetch('/api/fetch_professors')
-                ]);
+                // Fetch courses
+                const coursesResponse = await fetch('/api/fetch_courses');
 
                 if (!coursesResponse.ok) {
                     throw new Error('Failed to fetch courses');
                 }
 
-                if (!professorsResponse.ok) {
-                    throw new Error('Failed to fetch professors');
-                }
-
                 const coursesData = await coursesResponse.json();
-                const professorsData = await professorsResponse.json();
-
                 setCourses(coursesData.courses || []);
-                setProfessors(professorsData.professors || []);
             } catch (err) {
                 console.error('Error fetching data:', err);
-                setError('Failed to load data. Please try again later.');
+                setError('Failed to load course data. Please try again later.');
             } finally {
                 setLoading(false);
             }
@@ -89,7 +77,7 @@ export default function AnexPage() {
         };
     }, []);
 
-    // Search logic
+    // Search logic - now only for courses
     useEffect(() => {
         if (searchTerm.length < 2) {
             setSearchResults([]);
@@ -99,9 +87,8 @@ export default function AnexPage() {
 
         // Filter based on search term
         const term = searchTerm.toLowerCase();
-        let results: SearchResult[] = [];
 
-        // Search courses
+        // Search courses only
         const matchingCourses = courses
             .filter(course =>
                 course.code.toLowerCase().includes(term)
@@ -113,23 +100,8 @@ export default function AnexPage() {
                 original: course
             }));
 
-        // Search professors
-        const matchingProfessors = professors
-            .filter(prof =>
-                prof.name.toLowerCase().includes(term) ||
-                prof.department.toLowerCase().includes(term)
-            )
-            .map(prof => ({
-                id: `professor-${prof.name}`,
-                type: 'professor' as const,
-                displayText: `${prof.name} (${prof.department})`,
-                original: prof
-            }));
-
-        results = [...matchingCourses, ...matchingProfessors];
-
         // Sort results and limit to top 10
-        results.sort((a, b) => {
+        matchingCourses.sort((a, b) => {
             // Sort exact matches to the top
             const aStartsWithTerm = a.displayText.toLowerCase().startsWith(term);
             const bStartsWithTerm = b.displayText.toLowerCase().startsWith(term);
@@ -141,9 +113,9 @@ export default function AnexPage() {
             return a.displayText.localeCompare(b.displayText);
         });
 
-        setSearchResults(results.slice(0, 10));
-        setShowResults(results.length > 0);
-    }, [searchTerm, courses, professors]);
+        setSearchResults(matchingCourses.slice(0, 10));
+        setShowResults(matchingCourses.length > 0);
+    }, [searchTerm, courses]);
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
@@ -152,11 +124,19 @@ export default function AnexPage() {
         }
     };
 
-    const handleResultClick = (result: SearchResult) => {
-        // In a real app, you would navigate to the detail page for this result
-        console.log('Selected:', result);
+    const handleResultClick = async (result: SearchResult) => {
         setSearchTerm(result.displayText);
         setShowResults(false);
+
+        // Only fetch course data
+        const [gpaRes, courseDataRes] = await Promise.all([
+            fetch(`/api/get_gpa_by_term?course=${result.displayText}`),
+            fetch(`/api/get_course_data?course=${result.displayText}`)
+        ]);
+        const gpaJson = await gpaRes.json();
+        const courseJson = await courseDataRes.json();
+        setGpaData(gpaJson.data || []);
+        setCourseData(courseJson.data || []);
     };
 
     return (
@@ -171,7 +151,7 @@ export default function AnexPage() {
                             type="text"
                             value={searchTerm}
                             onChange={handleSearchChange}
-                            placeholder="Search courses or professors..."
+                            placeholder="Search courses..."
                             className="w-full p-4 pl-12 rounded-xl border border-red-100 focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none transition-all shadow-sm text-lg"
                             disabled={loading}
                         />
@@ -214,25 +194,12 @@ export default function AnexPage() {
                                                 className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center transition-colors border-b border-gray-100 last:border-0"
                                             >
                                                 <div className="mr-3 text-red-400 flex-shrink-0">
-                                                    {result.type === 'course' ? (
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                                        </svg>
-                                                    ) : (
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                        </svg>
-                                                    )}
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                                    </svg>
                                                 </div>
                                                 <div className="min-w-0 flex-1">
-                                                    {result.type === 'course' ? (
-                                                        <div className="font-medium truncate">{result.displayText}</div>
-                                                    ) : (
-                                                        <>
-                                                            <div className="font-medium truncate">{(result.original as Professor).name}</div>
-                                                            <div className="text-sm text-gray-500 truncate">{(result.original as Professor).department}</div>
-                                                        </>
-                                                    )}
+                                                    <div className="font-medium truncate">{result.displayText}</div>
                                                 </div>
                                             </button>
                                         </li>
@@ -242,6 +209,8 @@ export default function AnexPage() {
                         )}
                     </AnimatePresence>
                 </div>
+                {gpaData.length > 0 && <GpaLineGraph data={gpaData} />}
+                {courseData.length > 0 && <CourseDataTable data={courseData} />}
             </main>
 
             <footer className="py-4 text-center text-gray-500 text-sm border-t border-red-100 mt-auto">
