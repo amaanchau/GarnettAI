@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 
-export async function GET(request: Request) {
+export async function GET() {
     try {
         // Check if DATABASE_URL is defined
         if (!process.env.DATABASE_URL) {

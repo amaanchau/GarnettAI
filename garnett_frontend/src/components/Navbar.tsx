@@ -1,14 +1,6 @@
 "use client";  // This directive is needed for client-side components in Next.js
 import Link from 'next/link';
 import { useState } from 'react';
-import { Poppins } from 'next/font/google';
-
-// Initialize the Poppins font with medium weight
-const poppins = Poppins({
-    subsets: ['latin'],
-    weight: ['500'], // Using 500 (medium) 
-    display: 'swap',
-});
 
 export default function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
