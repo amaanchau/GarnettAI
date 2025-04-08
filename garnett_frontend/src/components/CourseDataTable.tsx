@@ -135,6 +135,24 @@ export default function CourseDataTable({ data }: Props) {
         return 'text-red-500';
     };
 
+    const tooltipMap: Record<string, string> = {
+        term: "Semester and Year",
+        average_gpa: "Average GPA",
+        rmp_link: "Rate My Professor Link",
+        instructor: "Instructor Name",
+        total: "Total Students",
+        a: "A Grades",
+        b: "B Grades",
+        c: "C Grades",
+        d: "D Grades",
+        f: "F Grades",
+        q: "Dropped",
+        u: "Unsatisfactory",
+        s: "Satisfactory",
+        i: "Incomplete",
+        x: "No Grade Assigned"
+    };
+
     if (!data || data.length === 0) {
         return <div className="mt-10 p-4 bg-red-50 text-red-500 rounded-lg">No course data available</div>;
     }
@@ -228,7 +246,18 @@ export default function CourseDataTable({ data }: Props) {
                                         onClick={() => handleSort(header)}
                                     >
                                         <div className="flex items-center justify-center space-x-1">
-                                            <span>{header.replace(/_/g, " ").toUpperCase()}</span>
+                                            <div className="relative group inline-flex justify-center items-center">
+                                                <span className="uppercase font-bold">
+                                                    {header.replace(/_/g, " ")}
+                                                </span>
+                                                {tooltipMap[header] && (
+                                                    <div className="absolute bottom-full mb-2 w-max max-w-xs px-3 py-1.5 text-xs text-white bg-gray-800 rounded shadow-lg opacity-0 group-hover:opacity-100 group-hover:translate-y-0 transform translate-y-2 transition-all z-50 whitespace-nowrap">
+                                                        {tooltipMap[header]}
+                                                    </div>
+                                                )}
+                                            </div>
+
+
                                             {header === sortField && (
                                                 <span className="text-red-600 ml-1">
                                                     {sortDirection === "asc" ? "↑" : "↓"}
