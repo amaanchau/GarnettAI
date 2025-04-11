@@ -31,14 +31,73 @@ type Message = {
   isUser: boolean;
 };
 
+// Session context type
+type SessionContext = {
+  currentCourse: string | null;
+  activeCourses: string[];
+};
+
 export default function Home() {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [conversationStarted, setConversationStarted] = useState(false);
+  const [sessionContext, setSessionContext] = useState<SessionContext>({
+    currentCourse: null,
+    activeCourses: []
+  });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Function to handle starting a new chat
+  const handleNewChat = () => {
+    setMessages([]);
+    setConversationStarted(false);
+    setInputValue('');
+    setIsTyping(false);
+    setIsLoading(false);
+    setSessionContext({ currentCourse: null, activeCourses: [] }); // Clear all course context
+
+    // Also clear localStorage
+    localStorage.removeItem('chatMessages');
+    localStorage.removeItem('sessionContext');
+    localStorage.removeItem('conversationStarted');
+
+    // Scroll to top if needed
+    window.scrollTo(0, 0);
+  };
+
+  // Load session data from localStorage on component mount
+  useEffect(() => {
+    const savedMessages = localStorage.getItem('chatMessages');
+    const savedContext = localStorage.getItem('sessionContext');
+    const savedConversationState = localStorage.getItem('conversationStarted');
+
+    if (savedMessages) {
+      setMessages(JSON.parse(savedMessages));
+    }
+
+    if (savedContext) {
+      setSessionContext(JSON.parse(savedContext));
+    }
+
+    if (savedConversationState === 'true') {
+      setConversationStarted(true);
+    }
+  }, []);
+
+  // Save session data to localStorage when it changes
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem('chatMessages', JSON.stringify(messages));
+      localStorage.setItem('conversationStarted', String(conversationStarted));
+    }
+
+    if (sessionContext.activeCourses && sessionContext.activeCourses.length > 0) {
+      localStorage.setItem('sessionContext', JSON.stringify(sessionContext));
+    }
+  }, [messages, sessionContext, conversationStarted]);
 
   // Auto-resize the textarea based on content
   useEffect(() => {
@@ -77,13 +136,20 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      // Call the API
+      // Get last 10 messages for context
+      const conversationHistory = messages.slice(-8);
+
+      // Call the API with conversation history and session context
       const response = await fetch('/api/answer_with_rag', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query: userMessage }),
+        body: JSON.stringify({
+          query: userMessage,
+          conversationHistory: conversationHistory,
+          sessionContext: sessionContext
+        }),
       });
 
       const data = await response.json();
@@ -91,6 +157,11 @@ export default function Home() {
       if (response.ok) {
         // Add AI response to chat
         setMessages(prev => [...prev, { content: data.answer, isUser: false }]);
+
+        // Update session context if it was returned
+        if (data.sessionContext) {
+          setSessionContext(data.sessionContext);
+        }
       } else {
         // Handle error
         setMessages(prev => [...prev, {
@@ -143,9 +214,36 @@ export default function Home() {
 
   return (
     <div className={`flex flex-col min-h-screen bg-white ${inter.className} font-medium`}>
-      <Navbar />
+      <Navbar onNewChat={handleNewChat} conversationStarted={conversationStarted} />
 
       <main className={`flex-grow flex flex-col items-center ${conversationStarted ? 'w-full p-0' : 'px-4 py-12'}`}>
+        {/* Current Course Indicator - Show when context is active */}
+        {conversationStarted && sessionContext.activeCourses && sessionContext.activeCourses.length > 0 && (
+          <div className="w-full max-w-7xl mx-auto px-4 absolute top-22 z-10">
+            <div className="bg-red-50 px-3 py-1 rounded-lg text-red-700 text-sm inline-flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              {sessionContext.activeCourses.length === 1 ? (
+                <>Current course: <span className="font-bold ml-1">{sessionContext.activeCourses[0]}</span></>
+              ) : (
+                <>
+                  Active courses:
+                  <span className="font-bold ml-1">
+                    {sessionContext.activeCourses.map((course, index) => (
+                      <span key={course}>
+                        {course}
+                        {index < sessionContext.activeCourses.length - 1 && ", "}
+                      </span>
+                    ))}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+
         {/* Header and intro section - only show if conversation hasn't started */}
         {!conversationStarted && (
           <>
@@ -251,8 +349,8 @@ export default function Home() {
             )}
             {isLoading && (
               <div className={conversationStarted ? "w-full max-w-7xl mx-auto px-4" : ""}>
-                <div className="flex items-center mb-4 mr-auto">
-                  <div className="p-4 rounded-xl rounded-tl-none flex items-center inline-block">
+                <div className="flex mb-4 justify-start w-full">
+                  <div className="p-3 rounded-xl rounded-tl-none flex items-center inline-block">
                     <div className="relative flex h-5 w-5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500"></span>
@@ -276,7 +374,13 @@ export default function Home() {
                 onKeyDown={handleKeyDown}
                 onFocus={() => setIsTyping(true)}
                 onBlur={() => setIsTyping(inputValue.length > 0)}
-                placeholder="Howdy, what class can I help you with?"
+                placeholder={
+                  sessionContext.activeCourses && sessionContext.activeCourses.length > 0
+                    ? sessionContext.activeCourses.length === 1
+                      ? `Ask about ${sessionContext.activeCourses[0]}...`
+                      : `Ask about ${sessionContext.activeCourses[0]} and ${sessionContext.activeCourses.length - 1} other course${sessionContext.activeCourses.length > 2 ? 's' : ''}...`
+                    : "Howdy, what class can I help you with?"
+                }
                 className={`w-full py-4 px-5 pr-16 rounded-xl border text-lg ${isTyping ? 'border-red-500 ring-2 ring-red-100' : 'border-red-100'} outline-none resize-none overflow-hidden transition-all`}
                 style={{ minHeight: '60px', maxHeight: '200px' }}
                 rows={1}
