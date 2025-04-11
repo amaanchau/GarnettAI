@@ -13,7 +13,6 @@ const pool = new Pool({
 });
 
 // Function to extract multiple courses from a query
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const extractCoursesAndProfessors = (query) => {
   // Regular expression to find course codes like CSCE 221, MATH 151, etc.
   // This matches uppercase letters followed by numbers, with optional space between
@@ -35,6 +34,7 @@ const extractCoursesAndProfessors = (query) => {
 };
 
 // Backward compatibility function for single course extraction
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const extractCourseAndProfessor = (query) => {
   const courses = extractCoursesAndProfessors(query);
   return courses.length > 0 ? courses[0] : null;
