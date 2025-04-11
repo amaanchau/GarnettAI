@@ -170,6 +170,7 @@ export default function Home() {
         }]);
       }
     } catch (error) {
+      console.error("API Error:", error);
       // Handle exception
       setMessages(prev => [...prev, {
         content: "Whoop! We're having trouble connecting right now. Please try again later.",
