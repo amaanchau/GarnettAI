@@ -141,8 +141,7 @@ export default function AnexPage() {
 
     return (
         <div className={`flex flex-col min-h-screen bg-white ${inter.className}`}>
-            <Navbar />
-
+            <Navbar conversationStarted={false} />
             <main className="flex-grow flex flex-col items-center px-4">
                 {/* Compact search section - positioned higher */}
                 <div className="w-full max-w-2xl mx-auto mt-2 relative" ref={searchContainerRef}>
