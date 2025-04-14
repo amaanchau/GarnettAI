@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip, Legend, ResponsiveContainer
@@ -35,6 +35,12 @@ interface TooltipProps {
     label?: string;
 }
 
+// Updated props interface to include selectedInstructors
+interface Props {
+    data: GPARecord[];
+    selectedInstructors: string[];
+}
+
 const getGpaColor = (gpa: number): string => {
     if (gpa >= 3.7) return "text-green-600";
     if (gpa >= 3.3) return "text-green-500";
@@ -52,7 +58,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
                 {payload.map((entry, index) => (
                     <p key={`item-${index}`} className="flex items-center mb-1">
                         <span className="w-3 h-3 inline-block mr-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
-                        <span className="font-medium">{entry.name}:</span>
+                        <span className="font-medium">{entry.name}</span>
                         <span className="ml-2">
                             {entry.value !== null && entry.value !== undefined ? (
                                 <span className={getGpaColor(entry.value)}>
@@ -68,11 +74,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
     return null;
 };
 
-interface Props {
-    data: GPARecord[];
-}
-
-export default function GpaLineGraph({ data }: Props) {
+export default function GpaLineGraph({ data, selectedInstructors }: Props) {
     const [activeInstructor, setActiveInstructor] = useState<string | null>(null);
 
     const instructors = [...new Set(data.map((d) => d.instructor))];
@@ -91,6 +93,23 @@ export default function GpaLineGraph({ data }: Props) {
         "#FF6B6B", "#4ECDC4", "#7971EA", "#FFA726", "#66BB6A",
         "#5C6BC0", "#EC407A", "#26A69A", "#AB47BC", "#EF5350"
     ];
+
+    // No data or no selected instructors case
+    if (data.length === 0 || selectedInstructors.length === 0) {
+        return (
+            <div className={`w-full mt-8 p-6 bg-white rounded-xl shadow-sm border border-red-100 transition-shadow hover:shadow-md ${inter.className}`}>
+                <div className="h-96 flex items-center justify-center text-gray-500">
+                    <div className="text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-red-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <p className="text-lg font-medium">No data to display</p>
+                        <p className="text-sm mt-2">Please select at least one instructor to view the GPA trends.</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={`w-full mt-8 p-6 bg-white rounded-xl shadow-sm border border-red-100 transition-shadow hover:shadow-md ${inter.className}`}>
@@ -128,29 +147,36 @@ export default function GpaLineGraph({ data }: Props) {
                         onMouseEnter={(e) => setActiveInstructor((e as unknown as { dataKey: string }).dataKey)}
                         onMouseLeave={() => setActiveInstructor(null)}
                     />
-                    {instructors.map((instructor, index) => (
-                        <Line
-                            key={instructor}
-                            type="monotone"
-                            dataKey={instructor}
-                            name={instructor}
-                            stroke={colors[index % colors.length]}
-                            strokeWidth={activeInstructor === instructor ? 3 : 2}
-                            opacity={activeInstructor ? (activeInstructor === instructor ? 1 : 0.3) : 1}
-                            dot={{
-                                r: activeInstructor === instructor ? 5 : 4,
-                                strokeWidth: 1,
-                                fill: "white"
-                            }}
-                            activeDot={{
-                                r: 6,
-                                strokeWidth: 0,
-                                fill: colors[index % colors.length],
-                                stroke: "white"
-                            }}
-                            connectNulls
-                        />
-                    ))}
+                    {instructors.map((instructor, index) => {
+                        // Only render the line if the instructor is in the selectedInstructors array
+                        if (!selectedInstructors.includes(instructor)) {
+                            return null;
+                        }
+
+                        return (
+                            <Line
+                                key={instructor}
+                                type="monotone"
+                                dataKey={instructor}
+                                name={instructor}
+                                stroke={colors[index % colors.length]}
+                                strokeWidth={activeInstructor === instructor ? 3 : 2}
+                                opacity={activeInstructor ? (activeInstructor === instructor ? 1 : 0.3) : 1}
+                                dot={{
+                                    r: activeInstructor === instructor ? 5 : 4,
+                                    strokeWidth: 1,
+                                    fill: "white"
+                                }}
+                                activeDot={{
+                                    r: 6,
+                                    strokeWidth: 0,
+                                    fill: colors[index % colors.length],
+                                    stroke: "white"
+                                }}
+                                connectNulls
+                            />
+                        );
+                    })}
                 </LineChart>
             </ResponsiveContainer>
         </div>

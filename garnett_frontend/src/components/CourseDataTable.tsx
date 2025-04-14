@@ -12,15 +12,18 @@ interface CourseData {
     [key: string]: string | number | null;
 }
 
+// Updated Props interface to include new callback functions and selectedInstructors
 interface Props {
     data: CourseData[];
+    onToggleInstructor: (instructor: string) => void;
+    onToggleAllInstructors: () => void;
+    selectedInstructors: string[];
 }
 
-export default function CourseDataTable({ data }: Props) {
+export default function CourseDataTable({ data, onToggleInstructor, onToggleAllInstructors, selectedInstructors }: Props) {
     const [sortField, setSortField] = useState<string>("average_gpa");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
     const [filteredData, setFilteredData] = useState<CourseData[]>([]);
-    const [selectedInstructors, setSelectedInstructors] = useState<string[]>([]);
     const [hoveredRow, setHoveredRow] = useState<number | null>(null);
     const [animateStats, setAnimateStats] = useState(false);
 
@@ -75,14 +78,10 @@ export default function CourseDataTable({ data }: Props) {
     useEffect(() => {
         if (!data || data.length === 0) return;
 
-        // Get unique instructors for filtering
-        const instructors = [...new Set(data.map(row => String(row.instructor)))];
-        setSelectedInstructors(instructors);
-
         // Apply initial sorting and set filtered data
         const sorted = sortDataFunction(data, sortField, sortDirection);
         setFilteredData(sorted);
-    }, [data]);
+    }, [data, sortField, sortDirection]);
 
     // Handle sorting
     const handleSort = (field: string) => {
@@ -93,36 +92,6 @@ export default function CourseDataTable({ data }: Props) {
 
         setSortField(field);
         setSortDirection(newDirection);
-
-        // Filter and sort current data
-        const currentData = data.filter(row =>
-            selectedInstructors.includes(String(row.instructor))
-        );
-        const sorted = sortDataFunction(currentData, field, newDirection);
-        setFilteredData(sorted);
-    };
-
-    // Toggle instructor filter
-    const toggleInstructor = (instructor: string) => {
-        let newSelected: string[];
-
-        if (selectedInstructors.includes(instructor)) {
-            // Remove if only one selected, otherwise filter it out
-            newSelected = selectedInstructors.length === 1
-                ? [...new Set(data.map(row => String(row.instructor)))]
-                : selectedInstructors.filter(i => i !== instructor);
-        } else {
-            newSelected = [...selectedInstructors, instructor];
-        }
-
-        setSelectedInstructors(newSelected);
-
-        // Filter and sort data
-        const filtered = data.filter(row =>
-            newSelected.includes(String(row.instructor))
-        );
-        const sorted = sortDataFunction(filtered, sortField, sortDirection);
-        setFilteredData(sorted);
     };
 
     // Helper function to get color based on GPA value
@@ -157,74 +126,8 @@ export default function CourseDataTable({ data }: Props) {
         return <div className="mt-10 p-4 bg-red-50 text-red-500 rounded-lg">No course data available</div>;
     }
 
-    // Get unique instructors for filtering UI
-    const uniqueInstructors = [...new Set(data.map(row => String(row.instructor)))];
-
     return (
         <div className={`w-full mt-1 ${inter.className}`}>
-            {/* Instructor Filter Pills with Unselect All option */}
-            <div className="mb-6">
-                <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-sm font-medium text-gray-700">Filter by instructor:</h3>
-                    <button
-                        onClick={() => {
-                            // Logic to toggle between all selected and none selected
-                            if (selectedInstructors.length === uniqueInstructors.length) {
-                                setSelectedInstructors([]);
-                                // Update filtered data with empty selection (show no data)
-                                setFilteredData([]);
-                            } else {
-                                const allInstructors = [...new Set(data.map(row => String(row.instructor)))];
-                                setSelectedInstructors(allInstructors);
-                                // Apply sorting to all data
-                                const sorted = sortDataFunction(data, sortField, sortDirection);
-                                setFilteredData(sorted);
-                            }
-                        }}
-                        className="text-sm text-gray-700 font-medium rounded-xl transition-all duration-200 
-              px-4 py-2 border border-gray-200 hover:border-red-200 hover:shadow-sm
-              relative group overflow-hidden"
-                    >
-                        <span className="relative z-10">
-                            {selectedInstructors.length === uniqueInstructors.length ? (
-                                <span className="flex items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                    Unselect All
-                                </span>
-                            ) : (
-                                <span className="flex items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                                    </svg>
-                                    Select All
-                                </span>
-                            )}
-                        </span>
-                        <span className="absolute bottom-0 left-0 w-full h-0 bg-gradient-to-r from-red-50 to-red-100 transition-all duration-300 group-hover:h-full -z-10"></span>
-                    </button>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                    {uniqueInstructors.map((instructor) => (
-                        <button
-                            key={instructor}
-                            onClick={() => toggleInstructor(instructor)}
-                            className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${selectedInstructors.includes(instructor)
-                                ? 'bg-red-100 text-red-700 border border-red-200 shadow-sm'
-                                : 'bg-white text-gray-700 border border-red-100 hover:border-red-200'
-                                } hover:shadow-md hover:-translate-y-0.5 relative group overflow-hidden`}
-                        >
-                            <span className="relative z-10">{instructor}</span>
-                            {selectedInstructors.includes(instructor) && (
-                                <span className="absolute inset-0 bg-red-100"></span>
-                            )}
-                            <span className="absolute bottom-0 left-0 w-full h-0 bg-gradient-to-r from-red-50 to-red-100 transition-all duration-300 group-hover:h-full -z-10"></span>
-                        </button>
-                    ))}
-                </div>
-            </div>
-
             {/* Table */}
             <div className="overflow-x-auto p-6 bg-white rounded-xl shadow-sm border border-red-100 transition-shadow hover:shadow-md">
                 {filteredData.length === 0 ? (

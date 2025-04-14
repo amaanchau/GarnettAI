@@ -35,6 +35,8 @@ export default function AnexPage() {
     const searchContainerRef = useRef<HTMLDivElement | null>(null);
     const [gpaData, setGpaData] = useState([]);
     const [courseData, setCourseData] = useState([]);
+    // Add state for selected instructors here, will be shared with both components
+    const [selectedInstructors, setSelectedInstructors] = useState<string[]>([]);
 
     // Fetch courses data on component mount
     useEffect(() => {
@@ -124,6 +126,52 @@ export default function AnexPage() {
         }
     };
 
+    // Add a new handler for the Enter key
+    const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && searchTerm.length >= 2) {
+            e.preventDefault();
+
+            // Find the first matching course
+            const matchingCourse = courses
+                .filter(course => course.code.toLowerCase().includes(searchTerm.toLowerCase()))
+                .sort((a, b) => {
+                    // Sort exact matches to the top
+                    const aStartsWithTerm = a.code.toLowerCase().startsWith(searchTerm.toLowerCase());
+                    const bStartsWithTerm = b.code.toLowerCase().startsWith(searchTerm.toLowerCase());
+
+                    if (aStartsWithTerm && !bStartsWithTerm) return -1;
+                    if (!aStartsWithTerm && bStartsWithTerm) return 1;
+
+                    // Then alphabetically
+                    return a.code.localeCompare(b.code);
+                })[0];
+
+            if (matchingCourse) {
+                // Hide search results
+                setShowResults(false);
+
+                // Fetch data for the matched course
+                const [gpaRes, courseDataRes] = await Promise.all([
+                    fetch(`/api/get_gpa_by_term?course=${matchingCourse.code}`),
+                    fetch(`/api/get_course_data?course=${matchingCourse.code}`)
+                ]);
+
+                const gpaJson = await gpaRes.json();
+                const courseJson = await courseDataRes.json();
+
+                setGpaData(gpaJson.data || []);
+                setCourseData(courseJson.data || []);
+
+                // Initialize selected instructors with all instructors from the data
+                const instructors = [...new Set((gpaJson.data || []).map((d: any) => d.instructor))];
+                setSelectedInstructors(instructors);
+
+                // Update search term to the matched course code
+                setSearchTerm(matchingCourse.code);
+            }
+        }
+    };
+
     const handleResultClick = async (result: SearchResult) => {
         setSearchTerm(result.displayText);
         setShowResults(false);
@@ -137,6 +185,39 @@ export default function AnexPage() {
         const courseJson = await courseDataRes.json();
         setGpaData(gpaJson.data || []);
         setCourseData(courseJson.data || []);
+
+        // Initialize selected instructors with all instructors from the data
+        const instructors = [...new Set((gpaJson.data || []).map((d: any) => d.instructor))];
+        setSelectedInstructors(instructors);
+    };
+
+    // Handle toggling instructor visibility for both table and graph
+    const toggleInstructor = (instructor: string) => {
+        let newSelected: string[];
+
+        if (selectedInstructors.includes(instructor)) {
+            // Remove if only one selected, otherwise filter it out
+            newSelected = selectedInstructors.length === 1
+                ? [...new Set(courseData.map((row: any) => String(row.instructor)))]
+                : selectedInstructors.filter(i => i !== instructor);
+        } else {
+            newSelected = [...selectedInstructors, instructor];
+        }
+
+        setSelectedInstructors(newSelected);
+    };
+
+    // Handle select/unselect all instructors
+    const toggleAllInstructors = () => {
+        if (courseData.length === 0) return;
+
+        const allInstructors = [...new Set(courseData.map((row: any) => String(row.instructor)))];
+
+        if (selectedInstructors.length === allInstructors.length) {
+            setSelectedInstructors([]);
+        } else {
+            setSelectedInstructors(allInstructors);
+        }
     };
 
     return (
@@ -150,6 +231,7 @@ export default function AnexPage() {
                             type="text"
                             value={searchTerm}
                             onChange={handleSearchChange}
+                            onKeyDown={handleKeyDown}
                             placeholder="Search courses..."
                             className="w-full p-4 pl-12 rounded-xl border border-red-100 focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none transition-all shadow-sm text-lg"
                             disabled={loading}
@@ -182,7 +264,7 @@ export default function AnexPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -10 }}
                                 transition={{ duration: 0.2 }}
-                                className="absolute z-10 mt-2 w-full left-0 right-0 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden max-h-[350px] overflow-y-auto"
+                                className="absolute z-50 mt-2 w-full left-0 right-0 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden max-h-[350px] overflow-y-auto"
                                 style={{ maxWidth: '100%', width: '100%' }}
                             >
                                 <ul className="w-full">
@@ -208,8 +290,78 @@ export default function AnexPage() {
                         )}
                     </AnimatePresence>
                 </div>
-                {gpaData.length > 0 && <GpaLineGraph data={gpaData} />}
-                {courseData.length > 0 && <CourseDataTable data={courseData} />}
+
+                {/* Instructor Filter Pills - moved here so both components can use them */}
+                {courseData.length > 0 && (
+                    <div className="w-full mt-6">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-sm font-medium text-gray-700">Filter by instructor:</h3>
+                            <button
+                                onClick={toggleAllInstructors}
+                                className="text-sm text-gray-700 font-medium rounded-xl transition-all duration-200 
+                                    px-4 py-2 border border-gray-200 hover:border-red-200 hover:shadow-sm
+                                    relative group overflow-hidden"
+                            >
+                                <span className="relative z-10">
+                                    {selectedInstructors.length === [...new Set(courseData.map((row: any) => String(row.instructor)))].length ? (
+                                        <span className="flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                            Unselect All
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                                            </svg>
+                                            Select All
+                                        </span>
+                                    )}
+                                </span>
+                                <span className="absolute bottom-0 left-0 w-full h-0 bg-gradient-to-r from-red-50 to-red-100 transition-all duration-300 group-hover:h-full -z-10"></span>
+                            </button>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                            {[...new Set(courseData.map((row: any) => String(row.instructor)))].map((instructor) => (
+                                <button
+                                    key={instructor}
+                                    onClick={() => toggleInstructor(instructor)}
+                                    className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${selectedInstructors.includes(instructor)
+                                            ? 'bg-red-100 text-red-700 border border-red-200 shadow-sm'
+                                            : 'bg-white text-gray-700 border border-red-100 hover:border-red-200'
+                                        } hover:shadow-md hover:-translate-y-0.5 relative group overflow-hidden`}
+                                >
+                                    <span className="relative z-10">{instructor}</span>
+                                    {selectedInstructors.includes(instructor) && (
+                                        <span className="absolute inset-0 bg-red-100"></span>
+                                    )}
+                                    <span className="absolute bottom-0 left-0 w-full h-0 bg-gradient-to-r from-red-50 to-red-100 transition-all duration-300 group-hover:h-full -z-10"></span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Updated component props to include selectedInstructors */}
+                {gpaData.length > 0 &&
+                    <GpaLineGraph
+                        data={gpaData}
+                        selectedInstructors={selectedInstructors}
+                    />
+                }
+
+                {courseData.length > 0 &&
+                    <CourseDataTable
+                        data={courseData.filter((row: any) =>
+                            selectedInstructors.includes(String(row.instructor))
+                        )}
+                        // Pass required functions
+                        onToggleInstructor={toggleInstructor}
+                        onToggleAllInstructors={toggleAllInstructors}
+                        selectedInstructors={selectedInstructors}
+                    />
+                }
             </main>
 
             <footer className="py-4 text-center text-gray-500 text-sm border-t border-red-100 mt-auto">
