@@ -42,7 +42,7 @@ interface CourseRecord {
     x: number;
     average_gpa: number;
     rmp_link?: string;
-    [key: string]: string | number | null | undefined;
+    [key: string]: string | number | undefined;
 }
 
 interface SearchResult {
@@ -193,11 +193,7 @@ export default function AnexPage() {
                 setCourseData(courseDataFromResponse);
 
                 // Initialize selected instructors with all instructors from the data
-                const instructorsSet = new Set<string>();
-                gpaDataFromResponse.forEach((d: GPARecord) => {
-                    instructorsSet.add(d.instructor);
-                });
-                const instructors = Array.from(instructorsSet);
+                const instructors = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))];
                 setSelectedInstructors(instructors);
 
                 // Update search term to the matched course code
@@ -225,11 +221,7 @@ export default function AnexPage() {
         setCourseData(courseDataFromResponse);
 
         // Initialize selected instructors with all instructors from the data
-        const instructorsSet = new Set<string>();
-        gpaDataFromResponse.forEach((d: GPARecord) => {
-            instructorsSet.add(d.instructor);
-        });
-        const instructors = Array.from(instructorsSet);
+        const instructors = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))];
         setSelectedInstructors(instructors);
     };
 
@@ -395,11 +387,9 @@ export default function AnexPage() {
 
                 {courseData.length > 0 &&
                     <CourseDataTable
-                        {/* @ts-ignore */}
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         data={courseData.filter((row: CourseRecord) =>
                             selectedInstructors.includes(String(row.instructor))
-                        ) as any}
+                        )}
                     />
                 }
             </main>
