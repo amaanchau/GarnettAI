@@ -12,15 +12,15 @@ interface CourseData {
     [key: string]: string | number | null;
 }
 
-// Updated Props interface to include new callback functions and selectedInstructors
 interface Props {
     data: CourseData[];
-    onToggleInstructor: (instructor: string) => void;
-    onToggleAllInstructors: () => void;
-    selectedInstructors: string[];
+    // We're removing these unused props
+    // onToggleInstructor: (instructor: string) => void;
+    // onToggleAllInstructors: () => void;
+    // selectedInstructors: string[];
 }
 
-export default function CourseDataTable({ data, onToggleInstructor, onToggleAllInstructors, selectedInstructors }: Props) {
+export default function CourseDataTable({ data }: Props) {
     const [sortField, setSortField] = useState<string>("average_gpa");
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
     const [filteredData, setFilteredData] = useState<CourseData[]>([]);

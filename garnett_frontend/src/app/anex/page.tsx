@@ -18,6 +18,33 @@ interface Course {
     name?: string;
 }
 
+// Define GPA data structure
+interface GPARecord {
+    term: string;
+    instructor: string;
+    avg_gpa: number;
+}
+
+// Define course data structure
+interface CourseRecord {
+    term: string;
+    instructor: string;
+    total: number;
+    a: number;
+    b: number;
+    c: number;
+    d: number;
+    f: number;
+    q: number;
+    i: number;
+    s: number;
+    u: number;
+    x: number;
+    average_gpa: number;
+    rmp_link?: string;
+    [key: string]: string | number | undefined;
+}
+
 interface SearchResult {
     id: string;
     type: 'course';
@@ -33,8 +60,8 @@ export default function AnexPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const searchContainerRef = useRef<HTMLDivElement | null>(null);
-    const [gpaData, setGpaData] = useState([]);
-    const [courseData, setCourseData] = useState([]);
+    const [gpaData, setGpaData] = useState<GPARecord[]>([]);
+    const [courseData, setCourseData] = useState<CourseRecord[]>([]);
     // Add state for selected instructors here, will be shared with both components
     const [selectedInstructors, setSelectedInstructors] = useState<string[]>([]);
 
@@ -159,11 +186,14 @@ export default function AnexPage() {
                 const gpaJson = await gpaRes.json();
                 const courseJson = await courseDataRes.json();
 
-                setGpaData(gpaJson.data || []);
-                setCourseData(courseJson.data || []);
+                const gpaDataFromResponse = gpaJson.data || [];
+                const courseDataFromResponse = courseJson.data || [];
+
+                setGpaData(gpaDataFromResponse);
+                setCourseData(courseDataFromResponse);
 
                 // Initialize selected instructors with all instructors from the data
-                const instructors = [...new Set((gpaJson.data || []).map((d: any) => d.instructor))];
+                const instructors = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))];
                 setSelectedInstructors(instructors);
 
                 // Update search term to the matched course code
@@ -183,11 +213,15 @@ export default function AnexPage() {
         ]);
         const gpaJson = await gpaRes.json();
         const courseJson = await courseDataRes.json();
-        setGpaData(gpaJson.data || []);
-        setCourseData(courseJson.data || []);
+
+        const gpaDataFromResponse = gpaJson.data || [];
+        const courseDataFromResponse = courseJson.data || [];
+
+        setGpaData(gpaDataFromResponse);
+        setCourseData(courseDataFromResponse);
 
         // Initialize selected instructors with all instructors from the data
-        const instructors = [...new Set((gpaJson.data || []).map((d: any) => d.instructor))];
+        const instructors = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))];
         setSelectedInstructors(instructors);
     };
 
@@ -198,7 +232,7 @@ export default function AnexPage() {
         if (selectedInstructors.includes(instructor)) {
             // Remove if only one selected, otherwise filter it out
             newSelected = selectedInstructors.length === 1
-                ? [...new Set(courseData.map((row: any) => String(row.instructor)))]
+                ? [...new Set(courseData.map((row: CourseRecord) => String(row.instructor)))]
                 : selectedInstructors.filter(i => i !== instructor);
         } else {
             newSelected = [...selectedInstructors, instructor];
@@ -211,7 +245,7 @@ export default function AnexPage() {
     const toggleAllInstructors = () => {
         if (courseData.length === 0) return;
 
-        const allInstructors = [...new Set(courseData.map((row: any) => String(row.instructor)))];
+        const allInstructors = [...new Set(courseData.map((row: CourseRecord) => String(row.instructor)))];
 
         if (selectedInstructors.length === allInstructors.length) {
             setSelectedInstructors([]);
@@ -303,7 +337,7 @@ export default function AnexPage() {
                                     relative group overflow-hidden"
                             >
                                 <span className="relative z-10">
-                                    {selectedInstructors.length === [...new Set(courseData.map((row: any) => String(row.instructor)))].length ? (
+                                    {selectedInstructors.length === [...new Set(courseData.map((row: CourseRecord) => String(row.instructor)))].length ? (
                                         <span className="flex items-center">
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -323,13 +357,13 @@ export default function AnexPage() {
                             </button>
                         </div>
                         <div className="flex flex-wrap gap-3">
-                            {[...new Set(courseData.map((row: any) => String(row.instructor)))].map((instructor) => (
+                            {[...new Set(courseData.map((row: CourseRecord) => String(row.instructor)))].map((instructor) => (
                                 <button
                                     key={instructor}
                                     onClick={() => toggleInstructor(instructor)}
                                     className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${selectedInstructors.includes(instructor)
-                                            ? 'bg-red-100 text-red-700 border border-red-200 shadow-sm'
-                                            : 'bg-white text-gray-700 border border-red-100 hover:border-red-200'
+                                        ? 'bg-red-100 text-red-700 border border-red-200 shadow-sm'
+                                        : 'bg-white text-gray-700 border border-red-100 hover:border-red-200'
                                         } hover:shadow-md hover:-translate-y-0.5 relative group overflow-hidden`}
                                 >
                                     <span className="relative z-10">{instructor}</span>
@@ -353,13 +387,9 @@ export default function AnexPage() {
 
                 {courseData.length > 0 &&
                     <CourseDataTable
-                        data={courseData.filter((row: any) =>
+                        data={courseData.filter((row: CourseRecord) =>
                             selectedInstructors.includes(String(row.instructor))
                         )}
-                        // Pass required functions
-                        onToggleInstructor={toggleInstructor}
-                        onToggleAllInstructors={toggleAllInstructors}
-                        selectedInstructors={selectedInstructors}
                     />
                 }
             </main>
