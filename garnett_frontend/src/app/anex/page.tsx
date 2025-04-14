@@ -42,7 +42,7 @@ interface CourseRecord {
     x: number;
     average_gpa: number;
     rmp_link?: string;
-    [key: string]: string | number | undefined;
+    [key: string]: string | number | null | undefined;
 }
 
 interface SearchResult {
@@ -397,7 +397,7 @@ export default function AnexPage() {
                     <CourseDataTable
                         data={courseData.filter((row: CourseRecord) =>
                             selectedInstructors.includes(String(row.instructor))
-                        )}
+                        ) as any}
                     />
                 }
             </main>
