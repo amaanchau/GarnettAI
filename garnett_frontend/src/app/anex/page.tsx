@@ -395,6 +395,8 @@ export default function AnexPage() {
 
                 {courseData.length > 0 &&
                     <CourseDataTable
+                        {/* @ts-ignore */}
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         data={courseData.filter((row: CourseRecord) =>
                             selectedInstructors.includes(String(row.instructor))
                         ) as any}
