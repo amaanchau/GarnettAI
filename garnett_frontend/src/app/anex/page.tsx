@@ -193,7 +193,11 @@ export default function AnexPage() {
                 setCourseData(courseDataFromResponse);
 
                 // Initialize selected instructors with all instructors from the data
-                const instructors: string[] = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))];
+                const instructorsSet = new Set<string>();
+                gpaDataFromResponse.forEach((d: GPARecord) => {
+                    instructorsSet.add(d.instructor);
+                });
+                const instructors = Array.from(instructorsSet);
                 setSelectedInstructors(instructors);
 
                 // Update search term to the matched course code
@@ -221,7 +225,11 @@ export default function AnexPage() {
         setCourseData(courseDataFromResponse);
 
         // Initialize selected instructors with all instructors from the data
-        const instructors: string[] = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))];
+        const instructorsSet = new Set<string>();
+        gpaDataFromResponse.forEach((d: GPARecord) => {
+            instructorsSet.add(d.instructor);
+        });
+        const instructors = Array.from(instructorsSet);
         setSelectedInstructors(instructors);
     };
 
