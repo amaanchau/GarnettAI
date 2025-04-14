@@ -262,7 +262,7 @@ export default function Home() {
                   transition: { duration: 0.3 }
                 }}
               >
-                Aggie AI💡
+                Aggly💡
               </motion.h1>
               <p className="text-xl text-gray-600 max-w-3xl leading-relaxed">
                 Ask anything about Texas A&M courses & professors! Get insights on grading, difficulty, and professor ratings using GPA data & Rate My Professor reviews.
@@ -414,7 +414,7 @@ export default function Home() {
 
       {!conversationStarted && (
         <footer className="py-4 text-center text-gray-500 text-sm border-t border-red-100">
-          <p>© 2025 Aggie AI - Help Texas A&M Students Find the Right Classes</p>
+          <p>© 2025 Aggly - Help Texas A&M Students Find the Right Classes</p>
         </footer>
       )}
     </div>
