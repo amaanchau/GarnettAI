@@ -214,7 +214,7 @@ export default function AnexPage() {
         const gpaJson = await gpaRes.json();
         const courseJson = await courseDataRes.json();
 
-        const gpaDataFromResponse = gpaJson.data || [];
+        const gpaDataFromResponse: GPARecord[] = gpaJson.data || [];
         const courseDataFromResponse = courseJson.data || [];
 
         setGpaData(gpaDataFromResponse);
