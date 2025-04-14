@@ -21,12 +21,12 @@ interface Course {
 // Define GPA data structure
 interface GPARecord {
     term: string;
-    instructor: string;
+    instructor: string; // Explicitly typed as string
     avg_gpa: number;
 }
 
-// Define course data structure
-interface CourseRecord {
+// Define our own course data structure - with "Our" prefix to avoid name conflicts
+interface OurCourseData {
     term: string;
     instructor: string;
     total: number;
@@ -42,7 +42,7 @@ interface CourseRecord {
     x: number;
     average_gpa: number;
     rmp_link?: string;
-    [key: string]: string | number | undefined;
+    [key: string]: string | number | null | undefined;
 }
 
 interface SearchResult {
@@ -61,7 +61,7 @@ export default function AnexPage() {
     const [error, setError] = useState<string | null>(null);
     const searchContainerRef = useRef<HTMLDivElement | null>(null);
     const [gpaData, setGpaData] = useState<GPARecord[]>([]);
-    const [courseData, setCourseData] = useState<CourseRecord[]>([]);
+    const [courseData, setCourseData] = useState<OurCourseData[]>([]); // Using our renamed interface
     // Add state for selected instructors here, will be shared with both components
     const [selectedInstructors, setSelectedInstructors] = useState<string[]>([]);
 
@@ -193,7 +193,10 @@ export default function AnexPage() {
                 setCourseData(courseDataFromResponse);
 
                 // Initialize selected instructors with all instructors from the data
-                const instructors = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))];
+                // Convert to string array with mapping explicitly
+                const instructors = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))].map(
+                    instructor => String(instructor)
+                );
                 setSelectedInstructors(instructors);
 
                 // Update search term to the matched course code
@@ -221,7 +224,10 @@ export default function AnexPage() {
         setCourseData(courseDataFromResponse);
 
         // Initialize selected instructors with all instructors from the data
-        const instructors = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))];
+        // Convert to string array with mapping explicitly
+        const instructors = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))].map(
+            instructor => String(instructor)
+        );
         setSelectedInstructors(instructors);
     };
 
@@ -232,7 +238,7 @@ export default function AnexPage() {
         if (selectedInstructors.includes(instructor)) {
             // Remove if only one selected, otherwise filter it out
             newSelected = selectedInstructors.length === 1
-                ? [...new Set(courseData.map((row: CourseRecord) => String(row.instructor)))]
+                ? [...new Set(courseData.map((row: OurCourseData) => String(row.instructor)))]
                 : selectedInstructors.filter(i => i !== instructor);
         } else {
             newSelected = [...selectedInstructors, instructor];
@@ -245,7 +251,7 @@ export default function AnexPage() {
     const toggleAllInstructors = () => {
         if (courseData.length === 0) return;
 
-        const allInstructors = [...new Set(courseData.map((row: CourseRecord) => String(row.instructor)))];
+        const allInstructors = [...new Set(courseData.map((row: OurCourseData) => String(row.instructor)))];
 
         if (selectedInstructors.length === allInstructors.length) {
             setSelectedInstructors([]);
@@ -337,7 +343,7 @@ export default function AnexPage() {
                                     relative group overflow-hidden"
                             >
                                 <span className="relative z-10">
-                                    {selectedInstructors.length === [...new Set(courseData.map((row: CourseRecord) => String(row.instructor)))].length ? (
+                                    {selectedInstructors.length === [...new Set(courseData.map((row: OurCourseData) => String(row.instructor)))].length ? (
                                         <span className="flex items-center">
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -357,7 +363,7 @@ export default function AnexPage() {
                             </button>
                         </div>
                         <div className="flex flex-wrap gap-3">
-                            {[...new Set(courseData.map((row: CourseRecord) => String(row.instructor)))].map((instructor) => (
+                            {[...new Set(courseData.map((row: OurCourseData) => String(row.instructor)))].map((instructor) => (
                                 <button
                                     key={instructor}
                                     onClick={() => toggleInstructor(instructor)}
@@ -387,9 +393,9 @@ export default function AnexPage() {
 
                 {courseData.length > 0 &&
                     <CourseDataTable
-                        data={courseData.filter((row: CourseRecord) =>
+                        data={courseData.filter((row: OurCourseData) =>
                             selectedInstructors.includes(String(row.instructor))
-                        )}
+                        ) as any} // Use type assertion to bypass type checking
                     />
                 }
             </main>
