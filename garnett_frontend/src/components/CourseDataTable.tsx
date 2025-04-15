@@ -123,7 +123,7 @@ export default function CourseDataTable({ data }: Props) {
     };
 
     if (!data || data.length === 0) {
-        return <div className="mt-10 p-4 mb-2 bg-red-50 text-red-500 rounded-lg">No course data available</div>;
+        return <div className="mt-10 p-4 mb-10 bg-red-50 text-red-500 rounded-lg">No course data available</div>;
     }
 
     return (
