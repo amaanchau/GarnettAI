@@ -217,7 +217,7 @@ export default function Home() {
     <div className={`flex flex-col min-h-screen bg-white ${inter.className} font-medium`}>
       <Navbar onNewChat={handleNewChat} conversationStarted={conversationStarted} />
 
-      <main className={`flex-grow flex flex-col items-center ${conversationStarted ? 'w-full p-0' : 'px-4 py-12'}`}>
+      <main className={`flex-grow flex flex-col items-center ${conversationStarted ? 'w-full p-0' : 'px-4 py-6'}`}>
         {/* Current Course Indicator - Show when context is active */}
         {conversationStarted && sessionContext.activeCourses && sessionContext.activeCourses.length > 0 && (
           <div className="w-full max-w-7xl mx-auto px-4 absolute top-22 z-10">
@@ -249,7 +249,7 @@ export default function Home() {
         {!conversationStarted && (
           <>
             <motion.div
-              className="text-center mb-12 max-w-5xl mx-auto"
+              className="text-center mb-6 max-w-5xl mx-auto"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -270,7 +270,7 @@ export default function Home() {
             </motion.div>
 
             <motion.div
-              className="w-full max-w-3xl grid grid-cols-1 md:grid-cols-3 gap-4 mb-12"
+              className="w-full max-w-3xl grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3, staggerChildren: 0.1 }}
@@ -330,7 +330,7 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className={conversationStarted ? "w-full max-w-7xl mx-auto px-4" : ""}>
+              <div className={conversationStarted ? "w-full max-w-7xl mx-auto px-4 mt-1" : ""}>
                 {messages.map((message, index) => (
                   <div
                     key={index}
@@ -413,7 +413,7 @@ export default function Home() {
       </main>
 
       {!conversationStarted && (
-        <footer className="py-4 text-center text-gray-500 text-sm border-t border-red-100">
+        <footer className="py-2 text-center text-gray-500 text-sm border-t border-red-100">
           <p>© 2025 Aggly - Help Texas A&M Students Find the Right Classes</p>
         </footer>
       )}

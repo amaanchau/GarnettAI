@@ -124,7 +124,7 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                         dataKey="term"
                         angle={-45}
                         textAnchor="end"
-                        height={80}
+                        height={85}
                         tick={{ fontSize: 14, fontWeight: "bold" }}
                         tickMargin={15}
                         stroke="#616161"
