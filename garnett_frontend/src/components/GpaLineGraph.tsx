@@ -78,7 +78,20 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
     const [activeInstructor, setActiveInstructor] = useState<string | null>(null);
 
     const instructors = [...new Set(data.map((d) => d.instructor))];
-    const terms = [...new Set(data.map((d) => d.term))].sort();
+    const terms = [...new Set(data.map((d) => d.term))].sort((a, b) => {
+        // Extract the season and year from the term string
+        const [seasonA, yearA] = a.split(' ');
+        const [seasonB, yearB] = b.split(' ');
+
+        // Compare years first
+        if (yearA !== yearB) {
+            return Number(yearA) - Number(yearB);
+        }
+
+        // If years are the same, sort by season
+        const seasonOrder = { 'SPRING': 1, 'SUMMER': 2, 'FALL': 3 };
+        return seasonOrder[seasonA as keyof typeof seasonOrder] - seasonOrder[seasonB as keyof typeof seasonOrder];
+    });
 
     const chartData: ChartEntry[] = terms.map(term => {
         const entry: ChartEntry = { term };
