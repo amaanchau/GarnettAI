@@ -103,9 +103,13 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
     });
 
     const colors = [
+        // Original colors
         "#FF6B6B", "#4ECDC4", "#7971EA", "#FFA726", "#66BB6A",
-        "#5C6BC0", "#EC407A", "#26A69A", "#AB47BC", "#EF5350"
+        "#5C6BC0", "#EC407A", "#26A69A", "#AB47BC", "#EF5350",
+        "#FFB6C1", "#AFEEEE", "#D8BFD8", "#FFFACD", "#BDFCC9",
+        "#B0E0E6", "#FFE4B5", "#E6E6FA", "#F0FFF0", "#FFF0F5"
     ];
+
 
     // No data or no selected instructors case
     if (data.length === 0 || selectedInstructors.length === 0) {
