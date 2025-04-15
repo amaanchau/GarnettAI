@@ -136,15 +136,11 @@ export default function Home() {
     // Set loading state
     setIsLoading(true);
 
-    // Add an empty AI message that will be updated with streaming content
-    const messageId = Date.now().toString();
-    setMessages(prev => [...prev, { content: '', isUser: false, id: messageId }]);
-
     try {
       // Get last 10 messages for context
       const conversationHistory = messages.slice(-8);
 
-      // Create fetch request to the streaming endpoint
+      // Create fetch request to the API endpoint
       const response = await fetch('/api/answer_with_rag', {
         method: 'POST',
         headers: {
@@ -161,86 +157,32 @@ export default function Home() {
         throw new Error(`Server responded with ${response.status}`);
       }
 
-      // Process the stream
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('Response body is not readable');
-      }
+      // Parse the JSON response
+      const data = await response.json();
 
-      let receivedText = '';
+      // Add AI's response to chat
+      setMessages(prev => [...prev, {
+        content: data.answer,
+        isUser: false,
+        id: Date.now().toString()
+      }]);
 
-      // Read stream as it comes in
-      while (true) {
-        const { done, value } = await reader.read();
-
-        if (done) {
-          break;
-        }
-
-        // Convert the Uint8Array to a string
-        const chunk = new TextDecoder().decode(value);
-
-        // Process each event in the chunk
-        const events = chunk.split('\n\n');
-
-        for (const event of events) {
-          if (event.startsWith('data: ')) {
-            try {
-              const jsonData = JSON.parse(event.substring(6));
-
-              // Handle individual content chunk
-              if (jsonData.content) {
-                receivedText += jsonData.content;
-
-                // Update the last message with the received text so far
-                setMessages(prev =>
-                  prev.map(msg =>
-                    msg.id === messageId
-                      ? { ...msg, content: receivedText }
-                      : msg
-                  )
-                );
-              }
-
-              // Handle completion
-              if (jsonData.done) {
-                // Final update with the complete text
-                if (jsonData.fullAnswer) {
-                  setMessages(prev =>
-                    prev.map(msg =>
-                      msg.id === messageId
-                        ? { ...msg, content: jsonData.fullAnswer }
-                        : msg
-                    )
-                  );
-                }
-
-                // Update session context
-                if (jsonData.sessionContext) {
-                  setSessionContext(jsonData.sessionContext);
-                }
-              }
-            } catch (err) {
-              console.error('Error parsing JSON data:', err);
-            }
-          }
-        }
+      // Update session context if returned in the response
+      if (data.sessionContext) {
+        setSessionContext(data.sessionContext);
       }
     } catch (error) {
       console.error("API Error:", error);
       // Handle exception
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === messageId
-            ? { ...msg, content: "Whoop! We're having trouble connecting right now. Please try again later." }
-            : msg
-        )
-      );
+      setMessages(prev => [...prev, {
+        content: "Whoop! We're having trouble connecting right now. Please try again later.",
+        isUser: false,
+        id: Date.now().toString()
+      }]);
     } finally {
       setIsLoading(false);
     }
   };
-
 
   // Sample prompts with icons
   const samplePrompts = [

@@ -1,4 +1,4 @@
-// pages/api/answer_with_rag/route.js
+// pages/api/answerWithRag.js
 import { OpenAI } from 'openai';
 import { Pool } from 'pg';
 import * as cheerio from 'cheerio';
@@ -202,7 +202,70 @@ DO NOT just spit out the data you receive, synthesize and understand the data so
 Unless asked, DO NOT give any links and keep the answer concise.`;
 };
 
-// Main API handler for the POST request
+const answerWithRag = async (query, conversationHistory = [], sessionContext = null) => {
+  // Extract all courses from the query
+  const coursesInQuery = extractCoursesAndProfessors(query);
+  
+  // Determine which courses to use
+  let coursesToUse = [];
+  
+  if (coursesInQuery.length > 0) {
+    // Use courses from current query
+    coursesToUse = coursesInQuery;
+  } else if (sessionContext?.activeCourses?.length > 0) {
+    // Fall back to context if no courses in query
+    coursesToUse = sessionContext.activeCourses;
+  }
+  
+  // If no courses found anywhere, ask for one
+  if (coursesToUse.length === 0) {
+    return {
+      answer: "Howdy! Please include a course name in your prompt (ex: CSCE 221) so I can help you better.",
+      sessionContext: { currentCourse: null, activeCourses: [] }
+    };
+  }
+
+  // For backward compatibility and UI indicators
+  const primaryCourse = coursesToUse[0]; 
+  
+  // Fetch course data for all courses to use
+  const courseData = {};
+  const profData = {};
+  
+  for (const course of coursesToUse) {
+    const courseInfo = await fetchCourseInfo(course);
+    courseData[course] = courseInfo;
+    
+    const profInfo = await fetchProfInfo(courseInfo.overall);
+    profData[course] = profInfo;
+  }
+  
+  // Build prompt with conversation history and context
+  const prompt = buildPromptWithMultiCourses(
+    query, 
+    conversationHistory, 
+    courseData, 
+    profData, 
+    { 
+      currentCourse: primaryCourse, 
+      activeCourses: coursesToUse 
+    }
+  );
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-3.5-turbo',
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  return {
+    answer: response.choices[0].message.content,
+    sessionContext: { 
+      currentCourse: primaryCourse,
+      activeCourses: coursesToUse 
+    }
+  };
+};
+
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -214,101 +277,11 @@ export async function POST(req) {
       return Response.json({ error: 'Missing query' }, { status: 400 });
     }
 
-    // Extract all courses from the query
-    const coursesInQuery = extractCoursesAndProfessors(query);
+    const result = await answerWithRag(query, conversationHistory, sessionContext);
     
-    // Determine which courses to use
-    let coursesToUse = [];
-    
-    if (coursesInQuery.length > 0) {
-      // Use courses from current query
-      coursesToUse = coursesInQuery;
-    } else if (sessionContext?.activeCourses?.length > 0) {
-      // Fall back to context if no courses in query
-      coursesToUse = sessionContext.activeCourses;
-    }
-    
-    // If no courses found anywhere, ask for one
-    if (coursesToUse.length === 0) {
-      return Response.json({
-        answer: "Howdy! Please include a course name in your prompt (ex: CSCE 221) so I can help you better.",
-        sessionContext: { currentCourse: null, activeCourses: [] }
-      });
-    }
-
-    // For backward compatibility and UI indicators
-    const primaryCourse = coursesToUse[0]; 
-    
-    // Fetch course data for all courses to use
-    const courseData = {};
-    const profData = {};
-    
-    for (const course of coursesToUse) {
-      const courseInfo = await fetchCourseInfo(course);
-      courseData[course] = courseInfo;
-      
-      const profInfo = await fetchProfInfo(courseInfo.overall);
-      profData[course] = profInfo;
-    }
-    
-    // Build prompt with conversation history and context
-    const prompt = buildPromptWithMultiCourses(
-      query, 
-      conversationHistory, 
-      courseData, 
-      profData, 
-      { 
-        currentCourse: primaryCourse, 
-        activeCourses: coursesToUse 
-      }
-    );
-
-    // Create a stream-enabled response
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        // Create the chat completion with streaming
-        const completion = await openai.chat.completions.create({
-          model: 'gpt-3.5-turbo',
-          messages: [{ role: 'user', content: prompt }],
-          stream: true,
-        });
-
-        let fullAnswer = '';
-
-        // Process each chunk as it comes in
-        for await (const chunk of completion) {
-          const content = chunk.choices[0]?.delta?.content || '';
-          if (content) {
-            fullAnswer += content;
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
-          }
-        }
-
-        // Send a final chunk with the complete answer and session context
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({
-              content: null,
-              done: true,
-              fullAnswer,
-              sessionContext: { 
-                currentCourse: primaryCourse,
-                activeCourses: coursesToUse 
-              }
-            })}\n\n`
-          )
-        );
-        controller.close();
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
+    return Response.json({
+      answer: result.answer,
+      sessionContext: result.sessionContext
     });
   } catch (error) {
     console.error('[RAG Error]', error);
