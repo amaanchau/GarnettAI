@@ -308,7 +308,7 @@ export default function Home() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          style={{ minHeight: conversationStarted ? '70vh' : '400px' }}
+          style={{ minHeight: conversationStarted ? '70vh' : '300px' }}
         >
           {/* Chat messages */}
           <div
@@ -316,7 +316,7 @@ export default function Home() {
             className={`flex-grow overflow-y-auto ${conversationStarted ? 'w-full mx-auto' : 'p-4'}`}
             style={{
               maxHeight: conversationStarted ? 'calc(100vh - 200px)' : 'calc(100vh - 350px)',
-              minHeight: conversationStarted ? '60vh' : '300px'
+              minHeight: conversationStarted ? '60vh' : '250px'
             }}
           >
             {messages.length === 0 ? (
