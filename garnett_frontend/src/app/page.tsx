@@ -29,6 +29,7 @@ const formatMessage = (content: string) => {
 type Message = {
   content: string;
   isUser: boolean;
+  id?: string
 };
 
 // Session context type
