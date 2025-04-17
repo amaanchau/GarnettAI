@@ -402,7 +402,7 @@ export default function AnexPage() {
             </main>
 
             <footer className="py-4 text-center text-gray-500 text-sm border-t border-red-100 mt-auto">
-                <p>© 2025 Aggly - Help Texas A&M Students Find the Right Classes</p>
+                <p>© 2025 Aggie AI - Help Texas A&M Students Find the Right Classes</p>
             </footer>
         </div>
     );
