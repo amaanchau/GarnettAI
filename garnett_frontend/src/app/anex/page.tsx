@@ -114,13 +114,13 @@ export default function AnexPage() {
             return;
         }
 
-        // Filter based on search term
-        const term = searchTerm.toLowerCase();
+        // Filter based on search term - remove spaces for comparison
+        const term = searchTerm.toLowerCase().replace(/\s+/g, '');
 
         // Search courses only
         const matchingCourses = courses
             .filter(course =>
-                course.code.toLowerCase().includes(term)
+                course.code.toLowerCase().replace(/\s+/g, '').includes(term)
             )
             .map(course => ({
                 id: `course-${course.code}`,
@@ -132,8 +132,11 @@ export default function AnexPage() {
         // Sort results and limit to top 10
         matchingCourses.sort((a, b) => {
             // Sort exact matches to the top
-            const aStartsWithTerm = a.displayText.toLowerCase().startsWith(term);
-            const bStartsWithTerm = b.displayText.toLowerCase().startsWith(term);
+            const aDisplayWithoutSpaces = a.displayText.toLowerCase().replace(/\s+/g, '');
+            const bDisplayWithoutSpaces = b.displayText.toLowerCase().replace(/\s+/g, '');
+
+            const aStartsWithTerm = aDisplayWithoutSpaces.startsWith(term);
+            const bStartsWithTerm = bDisplayWithoutSpaces.startsWith(term);
 
             if (aStartsWithTerm && !bStartsWithTerm) return -1;
             if (!aStartsWithTerm && bStartsWithTerm) return 1;
@@ -146,6 +149,7 @@ export default function AnexPage() {
         setShowResults(matchingCourses.length > 0);
     }, [searchTerm, courses]);
 
+    // Updated handleSearchChange function
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
         if (e.target.value.length >= 2) {
@@ -153,18 +157,21 @@ export default function AnexPage() {
         }
     };
 
-    // Add a new handler for the Enter key
+    // Replace the existing handleKeyDown function with this one:
     const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' && searchTerm.length >= 2) {
             e.preventDefault();
 
-            // Find the first matching course
+            // Remove spaces from the search term
+            const cleanedSearchTerm = searchTerm.replace(/\s+/g, '');
+
+            // Find the first matching course with the cleaned search term
             const matchingCourse = courses
-                .filter(course => course.code.toLowerCase().includes(searchTerm.toLowerCase()))
+                .filter(course => course.code.toLowerCase().includes(cleanedSearchTerm.toLowerCase()))
                 .sort((a, b) => {
                     // Sort exact matches to the top
-                    const aStartsWithTerm = a.code.toLowerCase().startsWith(searchTerm.toLowerCase());
-                    const bStartsWithTerm = b.code.toLowerCase().startsWith(searchTerm.toLowerCase());
+                    const aStartsWithTerm = a.code.toLowerCase().startsWith(cleanedSearchTerm.toLowerCase());
+                    const bStartsWithTerm = b.code.toLowerCase().startsWith(cleanedSearchTerm.toLowerCase());
 
                     if (aStartsWithTerm && !bStartsWithTerm) return -1;
                     if (!aStartsWithTerm && bStartsWithTerm) return 1;
@@ -330,6 +337,51 @@ export default function AnexPage() {
                         )}
                     </AnimatePresence>
                 </div>
+
+                {/* Add welcome message with animation when no data is shown */}
+                {!gpaData.length && !courseData.length && !error && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                            duration: 0.7,
+                            delay: 0.2,
+                            ease: [0.22, 1, 0.36, 1]
+                        }}
+                        className="w-full max-w-2xl mx-auto mt-8 px-6 py-8 bg-white rounded-xl shadow-sm border border-red-100 text-center"
+                    >
+                        <motion.h2
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.5, delay: 0.5 }}
+                            className="text-2xl font-bold text-gray-800 mb-3"
+                        >
+                            Find Your Perfect Class
+                        </motion.h2>
+                        <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.5, delay: 0.7 }}
+                            className="text-lg text-gray-600 mb-6"
+                        >
+                            Search any Texas A&M course to view professors, their grade distributions, and Rate My Professor links.
+                        </motion.p>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.5, delay: 0.9 }}
+                            className="flex items-center justify-center"
+                        >
+                            <div className="bg-red-50 p-3 rounded-lg inline-flex items-center text-red-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="text-sm font-medium">Try searching for courses like CSCE121, MATH151, or ENGR102</span>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+
 
                 {/* Instructor Filter Pills - moved here so both components can use them */}
                 {courseData.length > 0 && (
