@@ -44,7 +44,7 @@ interface OurCourseData {
     x: number;
     average_gpa: number;
     rmp_link?: string;
-    [key: string]: string | number | null | undefined;
+    [key: string]: string | number | null;
 }
 
 interface SearchResult {
