@@ -45,7 +45,7 @@ interface OurCourseData {
     average_gpa: number;
     rmp_link?: string;
     [key: string]: string | number | null | undefined;
-}``
+}
 
 interface SearchResult {
     id: string;
@@ -515,10 +515,11 @@ export default function AnexPage() {
 
                 {courseData.length > 0 &&
                     <CourseDataTable
+                        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
                         data={courseData.filter((row: OurCourseData) =>
                             selectedInstructors.includes(String(row.instructor)) &&
                             selectedSeasons.includes(row.term.split(' ')[0])
-                        )}
+                        ) as any}
                     />
                 }
             </main>
