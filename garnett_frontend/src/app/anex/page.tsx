@@ -422,7 +422,7 @@ export default function AnexPage() {
                         {/* Season Filter Buttons */}
                         <div className="mb-5">
                             <div className="flex justify-between items-center mb-2">
-                                <h3 className="text-sm font-bold text-gray-600">Term Filter</h3>
+                                <h3 className="text-sm font-medium text-gray-600">Term Filter</h3>
                                 <button
                                     onClick={toggleAllSeasons}
                                     className="text-xs text-gray-600 font-medium px-2 py-1 rounded hover:bg-gray-50 
@@ -464,7 +464,7 @@ export default function AnexPage() {
                         {/* Instructor Filter Pills - with simplified styling */}
                         <div className="mb-4">
                             <div className="flex justify-between items-center mb-2">
-                                <h3 className="text-sm font-bold text-gray-600">Instructor Filter</h3>
+                                <h3 className="text-sm font-medium text-gray-600">Instructor Filter</h3>
                                 <button
                                     onClick={toggleAllInstructors}
                                     className="text-xs text-gray-600 font-medium px-2 py-1 rounded hover:bg-gray-50 
@@ -518,7 +518,7 @@ export default function AnexPage() {
                         data={courseData.filter((row: OurCourseData) =>
                             selectedInstructors.includes(String(row.instructor)) &&
                             selectedSeasons.includes(row.term.split(' ')[0])
-                        ) as any}
+                        )}
                     />
                 }
             </main>
