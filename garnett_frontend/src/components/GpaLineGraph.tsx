@@ -52,10 +52,20 @@ const getGpaColor = (gpa: number): string => {
 
 const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
     if (active && payload && payload.length) {
+        // Sort the payload by GPA value in descending order
+        const sortedPayload = [...payload].sort((a, b) => {
+            // Handle null or undefined values
+            if (a.value === null || a.value === undefined) return 1;
+            if (b.value === null || b.value === undefined) return -1;
+            // Sort by value (descending)
+            return b.value - a.value;
+        });
+
         return (
-            <div className="bg-white p-4 border border-red-100 rounded-xl shadow-md text-sm">
+            <div className="bg-white p-4 border border-red-100 rounded-xl shadow-md text-sm"
+                style={{ zIndex: 1000, position: 'relative' }}>
                 <p className="font-medium text-gray-900 mb-2">{`Term: ${label}`}</p>
-                {payload.map((entry, index) => (
+                {sortedPayload.map((entry, index) => (
                     <p key={`item-${index}`} className="flex items-center mb-1">
                         <span className="w-3 h-3 inline-block mr-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
                         <span className="font-medium">{entry.name}</span>
@@ -103,13 +113,12 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
     });
 
     const colors = [
-        // Original colors
+        // Updated colors with better contrast against light backgrounds
         "#FF6B6B", "#4ECDC4", "#7971EA", "#FFA726", "#66BB6A",
         "#5C6BC0", "#EC407A", "#26A69A", "#AB47BC", "#EF5350",
-        "#FFB6C1", "#AFEEEE", "#D8BFD8", "#FFFACD", "#BDFCC9",
-        "#B0E0E6", "#FFE4B5", "#E6E6FA", "#F0FFF0", "#FFF0F5"
+        "#E75480", "#45B1E8", "#9370DB", "#E6A817", "#3CB371",
+        "#4682B4", "#D2691E", "#6A5ACD", "#2E8B57", "#CD5C5C"
     ];
-
 
     // No data or no selected instructors case
     if (data.length === 0 || selectedInstructors.length === 0) {
@@ -133,7 +142,7 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
             <ResponsiveContainer width="100%" height={400}>
                 <LineChart
                     data={chartData}
-                    margin={{ top: 10, right: 30, left: 20, bottom: 15 }}
+                    margin={{ top: 10, right: 30, left: 20, bottom: 25 }}
                     onMouseLeave={() => setActiveInstructor(null)}
                 >
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -142,14 +151,14 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                         angle={-45}
                         textAnchor="end"
                         height={85}
-                        tick={{ fontSize: 14, fontWeight: "bold" }}
+                        tick={{ fontSize: 12, fontWeight: "bold" }}
                         tickMargin={15}
                         stroke="#616161"
                     />
                     <YAxis
                         domain={[2.8, 4]}
                         tickCount={6}
-                        tick={{ fontSize: 14, fontWeight: "bold" }}
+                        tick={{ fontSize: 12, fontWeight: "bold" }}
                         stroke="#616161"
                     />
                     <Tooltip content={<CustomTooltip />} />
@@ -158,7 +167,7 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                         height={36}
                         wrapperStyle={{
                             paddingBottom: "10px",
-                            fontSize: "14px",
+                            fontSize: "13px",
                             fontWeight: 500
                         }}
                         onMouseEnter={(e) => setActiveInstructor((e as unknown as { dataKey: string }).dataKey)}
@@ -180,15 +189,17 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                                 strokeWidth={activeInstructor === instructor ? 3 : 2}
                                 opacity={activeInstructor ? (activeInstructor === instructor ? 1 : 0.3) : 1}
                                 dot={{
-                                    r: activeInstructor === instructor ? 5 : 4,
+                                    r: 4,
                                     strokeWidth: 1,
-                                    fill: "white"
+                                    fill: colors[index % colors.length],
+                                    stroke: colors[index % colors.length]
                                 }}
                                 activeDot={{
                                     r: 6,
-                                    strokeWidth: 0,
+                                    strokeWidth: 2,
                                     fill: colors[index % colors.length],
-                                    stroke: "white"
+                                    stroke: "#FFFFFF",
+                                    filter: "drop-shadow(0px 0px 4px rgba(0, 0, 0, 0.3))"
                                 }}
                                 connectNulls
                             />

@@ -1,3 +1,5 @@
+// First, let's update the AnexPage.tsx file to add the season filter functionality
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -64,6 +66,8 @@ export default function AnexPage() {
     const [courseData, setCourseData] = useState<OurCourseData[]>([]); // Using our renamed interface
     // Add state for selected instructors here, will be shared with both components
     const [selectedInstructors, setSelectedInstructors] = useState<string[]>([]);
+    // Add state for selected seasons
+    const [selectedSeasons, setSelectedSeasons] = useState<string[]>(['SPRING', 'SUMMER', 'FALL']);
 
     // Fetch courses data on component mount
     useEffect(() => {
@@ -149,11 +153,41 @@ export default function AnexPage() {
         setShowResults(matchingCourses.length > 0);
     }, [searchTerm, courses]);
 
+    // Filter GPA data based on selected seasons
+    const filteredGpaData = gpaData.filter(item => {
+        const termParts = item.term.split(' ');
+        const season = termParts[0];
+        return selectedSeasons.includes(season);
+    });
+
     // Updated handleSearchChange function
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
         if (e.target.value.length >= 2) {
             setShowResults(true);
+        }
+    };
+
+    // Toggle season filter
+    const toggleSeason = (season: string) => {
+        if (selectedSeasons.includes(season)) {
+            // Don't allow removing the last season
+            if (selectedSeasons.length > 1) {
+                setSelectedSeasons(prev => prev.filter(s => s !== season));
+            }
+        } else {
+            setSelectedSeasons(prev => [...prev, season]);
+        }
+    };
+
+    // Toggle all seasons
+    const toggleAllSeasons = () => {
+        const allSeasons = ['SPRING', 'SUMMER', 'FALL'];
+        if (selectedSeasons.length === allSeasons.length) {
+            // Keep at least one season selected
+            setSelectedSeasons(['SPRING']);
+        } else {
+            setSelectedSeasons(allSeasons);
         }
     };
 
@@ -382,63 +416,99 @@ export default function AnexPage() {
                     </motion.div>
                 )}
 
-
-                {/* Instructor Filter Pills - moved here so both components can use them */}
+                {/* Filters Section */}
                 {courseData.length > 0 && (
                     <div className="w-full mt-6">
-                        <div className="flex justify-between items-center mb-3">
-                            <h3 className="text-sm font-medium text-gray-700">Filter by instructor:</h3>
-                            <button
-                                onClick={toggleAllInstructors}
-                                className="text-sm text-gray-700 font-medium rounded-xl transition-all duration-200 
-                                    px-4 py-2 border border-gray-200 hover:border-red-200 hover:shadow-sm
-                                    relative group overflow-hidden"
-                            >
-                                <span className="relative z-10">
-                                    {selectedInstructors.length === [...new Set(courseData.map((row: OurCourseData) => String(row.instructor)))].length ? (
-                                        <span className="flex items-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        {/* Season Filter Buttons */}
+                        <div className="mb-5">
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="text-sm font-bold text-gray-600">Term Filter</h3>
+                                <button
+                                    onClick={toggleAllSeasons}
+                                    className="text-xs text-gray-600 font-medium px-2 py-1 rounded hover:bg-gray-50 
+                                    transition-colors duration-150 flex items-center"
+                                >
+                                    {selectedSeasons.length === 3 ? (
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                             </svg>
-                                            Unselect All
-                                        </span>
+                                            Clear All
+                                        </>
                                     ) : (
-                                        <span className="flex items-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                                             </svg>
                                             Select All
-                                        </span>
+                                        </>
                                     )}
-                                </span>
-                                <span className="absolute bottom-0 left-0 w-full h-0 bg-gradient-to-r from-red-50 to-red-100 transition-all duration-300 group-hover:h-full -z-10"></span>
-                            </button>
-                        </div>
-                        <div className="flex flex-wrap gap-3">
-                            {[...new Set(courseData.map((row: OurCourseData) => String(row.instructor)))].map((instructor) => (
-                                <button
-                                    key={instructor}
-                                    onClick={() => toggleInstructor(instructor)}
-                                    className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${selectedInstructors.includes(instructor)
-                                        ? 'bg-red-100 text-red-700 border border-red-200 shadow-sm'
-                                        : 'bg-white text-gray-700 border border-red-100 hover:border-red-200'
-                                        } hover:shadow-md hover:-translate-y-0.5 relative group overflow-hidden`}
-                                >
-                                    <span className="relative z-10">{instructor}</span>
-                                    {selectedInstructors.includes(instructor) && (
-                                        <span className="absolute inset-0 bg-red-100"></span>
-                                    )}
-                                    <span className="absolute bottom-0 left-0 w-full h-0 bg-gradient-to-r from-red-50 to-red-100 transition-all duration-300 group-hover:h-full -z-10"></span>
                                 </button>
-                            ))}
+                            </div>
+                            <div className="flex gap-2">
+                                {['SPRING', 'SUMMER', 'FALL'].map((season) => (
+                                    <button
+                                        key={season}
+                                        onClick={() => toggleSeason(season)}
+                                        className={`px-4 py-1 text-sm font-medium rounded transition-colors duration-150 flex-1 
+                                            ${selectedSeasons.includes(season)
+                                                ? 'bg-red-50 text-red-700 ring-1 ring-red-200'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                                    >
+                                        {season}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Instructor Filter Pills - with simplified styling */}
+                        <div className="mb-4">
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="text-sm font-bold text-gray-600">Instructor Filter</h3>
+                                <button
+                                    onClick={toggleAllInstructors}
+                                    className="text-xs text-gray-600 font-medium px-2 py-1 rounded hover:bg-gray-50 
+                                    transition-colors duration-150 flex items-center"
+                                >
+                                    {selectedInstructors.length === [...new Set(courseData.map((row: OurCourseData) => String(row.instructor)))].length ? (
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                            Clear All
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                                            </svg>
+                                            Select All
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                                {[...new Set(courseData.map((row: OurCourseData) => String(row.instructor)))].map((instructor) => (
+                                    <button
+                                        key={instructor}
+                                        onClick={() => toggleInstructor(instructor)}
+                                        className={`px-2 py-1 text-xs font-medium rounded transition-colors duration-150
+                                            ${selectedInstructors.includes(instructor)
+                                                ? 'bg-red-50 text-red-700 ring-1 ring-red-200'
+                                                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                                    >
+                                        {instructor}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 )}
 
-                {/* Updated component props to include selectedInstructors */}
+                {/* Updated component props to include selectedInstructors and filteredGpaData */}
                 {gpaData.length > 0 &&
                     <GpaLineGraph
-                        data={gpaData}
+                        data={filteredGpaData}
                         selectedInstructors={selectedInstructors}
                     />
                 }
@@ -446,8 +516,8 @@ export default function AnexPage() {
                 {courseData.length > 0 &&
                     <CourseDataTable
                         data={courseData.filter((row: OurCourseData) =>
-                            selectedInstructors.includes(String(row.instructor))
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            selectedInstructors.includes(String(row.instructor)) &&
+                            selectedSeasons.includes(row.term.split(' ')[0])
                         ) as any}
                     />
                 }
