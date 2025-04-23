@@ -401,45 +401,26 @@ export default function AnexPage() {
                 <AnimatePresence>
                     {!gpaData.length && !courseData.length && !error && !dataLoading && (
                         <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{
-                                duration: 0.7,
-                                delay: 0.2,
-                                ease: [0.22, 1, 0.36, 1]
-                            }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
                             className="w-full max-w-2xl mx-auto mt-8 px-6 py-8 bg-white rounded-xl shadow-sm border border-red-100 text-center"
                         >
-                            <motion.h2
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.5, delay: 0.5 }}
-                                className="text-2xl font-bold text-gray-800 mb-3"
-                            >
+                            <h2 className="text-2xl font-bold text-gray-800 mb-3">
                                 Find Your Perfect Class
-                            </motion.h2>
-                            <motion.p
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.5, delay: 0.7 }}
-                                className="text-lg text-gray-600 mb-6"
-                            >
+                            </h2>
+                            <p className="text-lg text-gray-600 mb-6">
                                 Search any Texas A&M course to view professors, their grade distributions, and Rate My Professor links.
-                            </motion.p>
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.5, delay: 0.9 }}
-                                className="flex items-center justify-center"
-                            >
+                            </p>
+                            <div className="flex items-center justify-center">
                                 <div className="bg-red-50 p-3 rounded-lg inline-flex items-center text-red-700">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                     <span className="text-sm font-medium">Try searching for courses like CSCE121, MATH151, or ENGR102</span>
                                 </div>
-                            </motion.div>
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -448,14 +429,10 @@ export default function AnexPage() {
                 <AnimatePresence>
                     {courseData.length > 0 && (
                         <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{
-                                duration: 0.5,
-                                delay: 0.1,
-                                ease: "easeOut"
-                            }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.15 }}
                             className="w-full mt-6"
                         >
                             {/* Season Filter Buttons */}
@@ -549,14 +526,10 @@ export default function AnexPage() {
                 <AnimatePresence>
                     {gpaData.length > 0 && (
                         <motion.div
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -30 }}
-                            transition={{
-                                duration: 0.6,
-                                delay: 0.2,
-                                ease: "easeOut"
-                            }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.15 }}
                             className="w-full"
                         >
                             <GpaLineGraph
@@ -570,14 +543,10 @@ export default function AnexPage() {
                 <AnimatePresence>
                     {courseData.length > 0 && (
                         <motion.div
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -30 }}
-                            transition={{
-                                duration: 0.6,
-                                delay: 0.3,
-                                ease: "easeOut"
-                            }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.15 }}
                             className="w-full"
                         >
                             <CourseDataTable
