@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip, Legend, ResponsiveContainer
 } from "recharts";
 import { Inter } from "next/font/google";
-import { createPortal } from "react-dom";
 
 const inter = Inter({
     subsets: ["latin"],
@@ -34,10 +33,6 @@ interface TooltipProps {
     active?: boolean;
     payload?: TooltipPayload[];
     label?: string;
-    coordinate?: {
-        x: number;
-        y: number;
-    };
 }
 
 interface Props {
@@ -54,110 +49,41 @@ const getGpaColor = (gpa: number): string => {
     return "text-red-500";
 };
 
-// Enhanced CustomTooltip using React Portal
-const CustomTooltip = ({ active, payload, label, coordinate }: TooltipProps) => {
-    const [portalElement, setPortalElement] = useState<HTMLElement | null>(null);
+const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
+    if (active && payload && payload.length) {
+        // Sort the payload by GPA value in descending order
+        const sortedPayload = [...payload].sort((a, b) => {
+            // Handle null or undefined values
+            if (a.value === null || a.value === undefined) return 1;
+            if (b.value === null || b.value === undefined) return -1;
+            // Sort by value (descending)
+            return b.value - a.value;
+        });
 
-    // Set up portal element
-    useEffect(() => {
-        let element = document.getElementById('tooltip-portal');
-        if (!element) {
-            element = document.createElement('div');
-            element.id = 'tooltip-portal';
-            element.style.position = 'fixed';
-            element.style.top = '0';
-            element.style.left = '0';
-            element.style.width = '100%';
-            element.style.height = '100%';
-            element.style.pointerEvents = 'none';
-            element.style.zIndex = '10000'; // Higher than any other element
-            document.body.appendChild(element);
-        }
-        setPortalElement(element);
-
-        return () => {
-            // Cleanup function
-            if (element && element.childNodes.length === 0) {
-                document.body.removeChild(element);
-            }
-        };
-    }, []);
-
-    if (!active || !payload || !payload.length || !coordinate || !portalElement) {
-        return null;
+        return (
+            <div className="bg-white p-4 border border-red-100 rounded-xl shadow-md text-sm"
+                style={{ zIndex: 1000, position: 'relative' }}>
+                <p className="font-medium text-gray-900 mb-2">{`Term: ${label}`}</p>
+                {sortedPayload.map((entry, index) => (
+                    <p key={`item-${index}`} className="flex items-center mb-1">
+                        <span className="w-3 h-3 inline-block mr-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
+                        <span className="font-medium">{entry.name}</span>
+                        <span className="ml-2">
+                            {entry.value !== null && entry.value !== undefined ? (
+                                <span className={getGpaColor(entry.value)}>
+                                    {Number(entry.value).toFixed(2)}
+                                </span>
+                            ) : "N/A"}
+                        </span>
+                    </p>
+                ))}
+            </div>
+        );
     }
-
-    // Sort the payload by GPA value in descending order
-    const sortedPayload = [...payload].sort((a, b) => {
-        // Handle null or undefined values
-        if (a.value === null || a.value === undefined) return 1;
-        if (b.value === null || b.value === undefined) return -1;
-        // Sort by value (descending)
-        return b.value - a.value;
-    });
-
-    // Calculate position
-    // Get viewport dimensions
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    // Tooltip dimensions (estimated)
-    const tooltipWidth = Math.min(300, viewportWidth * 0.8);
-    const tooltipHeight = 100 + sortedPayload.length * 24; // Base height + item height
-
-    // Initial position based on chart coordinate
-    let left = coordinate.x;
-    let top = coordinate.y - 10;
-
-    // Adjust position to keep tooltip within viewport
-    if (left + tooltipWidth > viewportWidth) {
-        left = left - tooltipWidth - 20;
-    }
-
-    if (top + tooltipHeight > viewportHeight) {
-        top = viewportHeight - tooltipHeight - 20;
-    }
-
-    // Ensure we don't go off the left or top edges
-    left = Math.max(10, left);
-    top = Math.max(10, top);
-
-    const tooltipStyle = {
-        position: 'absolute' as 'absolute',
-        left: `${left}px`,
-        top: `${top}px`,
-        backgroundColor: 'white',
-        padding: '12px',
-        borderRadius: '12px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-        border: '1px solid #FDE8E8', // light red border
-        pointerEvents: 'all',
-        zIndex: 10000,
-        maxWidth: `${tooltipWidth}px`,
-        overflowY: 'auto',
-        maxHeight: '80vh'
-    };
-
-    return createPortal(
-        <div style={tooltipStyle} className={`${inter.className} text-sm`}>
-            <p className="font-medium text-gray-900 mb-2">{`Term: ${label}`}</p>
-            {sortedPayload.map((entry, index) => (
-                <p key={`item-${index}`} className="flex items-center mb-1">
-                    <span className="w-3 h-3 inline-block mr-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
-                    <span className="font-medium">{entry.name}</span>
-                    <span className="ml-2">
-                        {entry.value !== null && entry.value !== undefined ? (
-                            <span className={getGpaColor(entry.value)}>
-                                {Number(entry.value).toFixed(2)}
-                            </span>
-                        ) : "N/A"}
-                    </span>
-                </p>
-            ))}
-        </div>,
-        portalElement
-    );
+    return null;
 };
+
+// Removing custom legend component as we're using the built-in one with styling
 
 export default function GpaLineGraph({ data, selectedInstructors }: Props) {
     const [activeInstructor, setActiveInstructor] = useState<string | null>(null);
@@ -194,6 +120,11 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
         "#4682B4", "#D2691E", "#6A5ACD", "#2E8B57", "#CD5C5C"
     ];
 
+    // Filter only the selected instructors
+    const filteredInstructors = instructors.filter(
+        instructor => selectedInstructors.includes(instructor)
+    );
+
     // No data or no selected instructors case
     if (data.length === 0 || selectedInstructors.length === 0) {
         return (
@@ -213,6 +144,8 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
 
     return (
         <div className={`w-full mt-8 p-6 bg-white rounded-xl shadow-sm border border-red-100 transition-shadow hover:shadow-md ${inter.className}`}>
+            {/* Removing instructor count warning as requested */}
+            
             <ResponsiveContainer width="100%" height={400}>
                 <LineChart
                     data={chartData}
@@ -235,11 +168,7 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                         tick={{ fontSize: 12, fontWeight: "bold" }}
                         stroke="#616161"
                     />
-                    <Tooltip
-                        content={<CustomTooltip />}
-                        wrapperStyle={{ pointerEvents: 'auto', zIndex: 10000 }}
-                        cursor={{ stroke: '#f87171', strokeWidth: 1, strokeDasharray: '5 5' }}
-                    />
+                    <Tooltip content={<CustomTooltip />} />
                     <Legend
                         verticalAlign="top"
                         height={selectedInstructors.length > 8 ? 72 : selectedInstructors.length > 4 ? 54 : 36}
@@ -253,8 +182,7 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                             flexWrap: "wrap",
                             justifyContent: "center",
                             gap: "8px",
-                            lineHeight: "1.2",
-                            zIndex: 1 // Lower z-index for the legend
+                            lineHeight: "1.2"
                         }}
                         onMouseEnter={(e) => setActiveInstructor((e as unknown as { dataKey: string }).dataKey)}
                         onMouseLeave={() => setActiveInstructor(null)}
@@ -293,6 +221,7 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                     })}
                 </LineChart>
             </ResponsiveContainer>
+            {/* Removing additional instructor list as requested */}
         </div>
     );
 }
