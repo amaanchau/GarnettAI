@@ -68,6 +68,8 @@ export default function AnexPage() {
     const [selectedInstructors, setSelectedInstructors] = useState<string[]>([]);
     // Add state for selected seasons
     const [selectedSeasons, setSelectedSeasons] = useState<string[]>(['SPRING', 'SUMMER', 'FALL']);
+    // Add loading state for data load animation
+    const [dataLoading, setDataLoading] = useState(false);
 
     // Fetch courses data on component mount
     useEffect(() => {
@@ -218,6 +220,16 @@ export default function AnexPage() {
                 // Hide search results
                 setShowResults(false);
 
+                // Set loading state for animations
+                setDataLoading(true);
+
+                // Update search term to the matched course code
+                setSearchTerm(matchingCourse.code);
+
+                // Clear previous data
+                setGpaData([]);
+                setCourseData([]);
+
                 // Fetch data for the matched course
                 const [gpaRes, courseDataRes] = await Promise.all([
                     fetch(`/api/get_gpa_by_term?course=${matchingCourse.code}`),
@@ -230,18 +242,18 @@ export default function AnexPage() {
                 const gpaDataFromResponse = gpaJson.data || [];
                 const courseDataFromResponse = courseJson.data || [];
 
+                // Set the data and end loading state
                 setGpaData(gpaDataFromResponse);
                 setCourseData(courseDataFromResponse);
 
                 // Initialize selected instructors with all instructors from the data
-                // Convert to string array with mapping explicitly
                 const instructors = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))].map(
                     instructor => String(instructor)
                 );
                 setSelectedInstructors(instructors);
 
-                // Update search term to the matched course code
-                setSearchTerm(matchingCourse.code);
+                // End loading state
+                setDataLoading(false);
             }
         }
     };
@@ -250,26 +262,37 @@ export default function AnexPage() {
         setSearchTerm(result.displayText);
         setShowResults(false);
 
+        // Set loading state for animations
+        setDataLoading(true);
+
+        // Clear previous data
+        setGpaData([]);
+        setCourseData([]);
+
         // Only fetch course data
         const [gpaRes, courseDataRes] = await Promise.all([
             fetch(`/api/get_gpa_by_term?course=${result.displayText}`),
             fetch(`/api/get_course_data?course=${result.displayText}`)
         ]);
+
         const gpaJson = await gpaRes.json();
         const courseJson = await courseDataRes.json();
 
         const gpaDataFromResponse = gpaJson.data || [];
         const courseDataFromResponse = courseJson.data || [];
 
+        // Set the data and end loading state
         setGpaData(gpaDataFromResponse);
         setCourseData(courseDataFromResponse);
 
         // Initialize selected instructors with all instructors from the data
-        // Convert to string array with mapping explicitly
         const instructors = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))].map(
             instructor => String(instructor)
         );
         setSelectedInstructors(instructors);
+
+        // End loading state
+        setDataLoading(false);
     };
 
     // Handle toggling instructor visibility for both table and graph
@@ -372,156 +395,201 @@ export default function AnexPage() {
                     </AnimatePresence>
                 </div>
 
+                {/* No loading message - just a clean transition */}
+
                 {/* Add welcome message with animation when no data is shown */}
-                {!gpaData.length && !courseData.length && !error && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{
-                            duration: 0.7,
-                            delay: 0.2,
-                            ease: [0.22, 1, 0.36, 1]
-                        }}
-                        className="w-full max-w-2xl mx-auto mt-8 px-6 py-8 bg-white rounded-xl shadow-sm border border-red-100 text-center"
-                    >
-                        <motion.h2
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.5, delay: 0.5 }}
-                            className="text-2xl font-bold text-gray-800 mb-3"
-                        >
-                            Find Your Perfect Class
-                        </motion.h2>
-                        <motion.p
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.5, delay: 0.7 }}
-                            className="text-lg text-gray-600 mb-6"
-                        >
-                            Search any Texas A&M course to view professors, their grade distributions, and Rate My Professor links.
-                        </motion.p>
+                <AnimatePresence>
+                    {!gpaData.length && !courseData.length && !error && !dataLoading && (
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.5, delay: 0.9 }}
-                            className="flex items-center justify-center"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{
+                                duration: 0.7,
+                                delay: 0.2,
+                                ease: [0.22, 1, 0.36, 1]
+                            }}
+                            className="w-full max-w-2xl mx-auto mt-8 px-6 py-8 bg-white rounded-xl shadow-sm border border-red-100 text-center"
                         >
-                            <div className="bg-red-50 p-3 rounded-lg inline-flex items-center text-red-700">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span className="text-sm font-medium">Try searching for courses like CSCE121, MATH151, or ENGR102</span>
-                            </div>
+                            <motion.h2
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.5, delay: 0.5 }}
+                                className="text-2xl font-bold text-gray-800 mb-3"
+                            >
+                                Find Your Perfect Class
+                            </motion.h2>
+                            <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.5, delay: 0.7 }}
+                                className="text-lg text-gray-600 mb-6"
+                            >
+                                Search any Texas A&M course to view professors, their grade distributions, and Rate My Professor links.
+                            </motion.p>
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.5, delay: 0.9 }}
+                                className="flex items-center justify-center"
+                            >
+                                <div className="bg-red-50 p-3 rounded-lg inline-flex items-center text-red-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span className="text-sm font-medium">Try searching for courses like CSCE121, MATH151, or ENGR102</span>
+                                </div>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
-                )}
+                    )}
+                </AnimatePresence>
 
                 {/* Filters Section */}
-                {courseData.length > 0 && (
-                    <div className="w-full mt-6">
-                        {/* Season Filter Buttons */}
-                        <div className="mb-5">
-                            <div className="flex justify-between items-center mb-2">
-                                <h3 className="text-sm font-medium text-gray-600">Term Filter</h3>
-                                <button
-                                    onClick={toggleAllSeasons}
-                                    className="text-xs text-gray-600 font-medium px-2 py-1 rounded hover:bg-gray-50 
-                                    transition-colors duration-150 flex items-center"
-                                >
-                                    {selectedSeasons.length === 3 ? (
-                                        <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
-                                            Clear All
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                                            </svg>
-                                            Select All
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                            <div className="flex gap-2">
-                                {['SPRING', 'SUMMER', 'FALL'].map((season) => (
+                <AnimatePresence>
+                    {courseData.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{
+                                duration: 0.5,
+                                delay: 0.1,
+                                ease: "easeOut"
+                            }}
+                            className="w-full mt-6"
+                        >
+                            {/* Season Filter Buttons */}
+                            <div className="mb-5">
+                                <div className="flex justify-between items-center mb-2">
+                                    <h3 className="text-sm font-medium text-gray-600">Term Filter</h3>
                                     <button
-                                        key={season}
-                                        onClick={() => toggleSeason(season)}
-                                        className={`px-4 py-1 text-sm font-medium rounded transition-colors duration-150 flex-1 
-                                            ${selectedSeasons.includes(season)
-                                                ? 'bg-red-50 text-red-700 ring-1 ring-red-200'
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                                        onClick={toggleAllSeasons}
+                                        className="text-xs text-gray-600 font-medium px-2 py-1 rounded hover:bg-gray-50 
+                                        transition-colors duration-150 flex items-center"
                                     >
-                                        {season}
+                                        {selectedSeasons.length === 3 ? (
+                                            <>
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                                Clear All
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                                                </svg>
+                                                Select All
+                                            </>
+                                        )}
                                     </button>
-                                ))}
+                                </div>
+                                <div className="flex gap-2">
+                                    {['SPRING', 'SUMMER', 'FALL'].map((season) => (
+                                        <button
+                                            key={season}
+                                            onClick={() => toggleSeason(season)}
+                                            className={`px-4 py-1 text-sm font-medium rounded transition-colors duration-150 flex-1 
+                                                ${selectedSeasons.includes(season)
+                                                    ? 'bg-red-50 text-red-700 ring-1 ring-red-200'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                                        >
+                                            {season}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Instructor Filter Pills - with simplified styling */}
-                        <div className="mb-4">
-                            <div className="flex justify-between items-center mb-2">
-                                <h3 className="text-sm font-medium text-gray-600">Instructor Filter</h3>
-                                <button
-                                    onClick={toggleAllInstructors}
-                                    className="text-xs text-gray-600 font-medium px-2 py-1 rounded hover:bg-gray-50 
-                                    transition-colors duration-150 flex items-center"
-                                >
-                                    {selectedInstructors.length === [...new Set(courseData.map((row: OurCourseData) => String(row.instructor)))].length ? (
-                                        <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
-                                            Clear All
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                                            </svg>
-                                            Select All
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                                {[...new Set(courseData.map((row: OurCourseData) => String(row.instructor)))].map((instructor) => (
+                            {/* Instructor Filter Pills - with simplified styling */}
+                            <div className="mb-4">
+                                <div className="flex justify-between items-center mb-2">
+                                    <h3 className="text-sm font-medium text-gray-600">Instructor Filter</h3>
                                     <button
-                                        key={instructor}
-                                        onClick={() => toggleInstructor(instructor)}
-                                        className={`px-2 py-1 text-xs font-medium rounded transition-colors duration-150
-                                            ${selectedInstructors.includes(instructor)
-                                                ? 'bg-red-50 text-red-700 ring-1 ring-red-200'
-                                                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                                        onClick={toggleAllInstructors}
+                                        className="text-xs text-gray-600 font-medium px-2 py-1 rounded hover:bg-gray-50 
+                                        transition-colors duration-150 flex items-center"
                                     >
-                                        {instructor}
+                                        {selectedInstructors.length === [...new Set(courseData.map((row: OurCourseData) => String(row.instructor)))].length ? (
+                                            <>
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                                Clear All
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                                                </svg>
+                                                Select All
+                                            </>
+                                        )}
                                     </button>
-                                ))}
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {[...new Set(courseData.map((row: OurCourseData) => String(row.instructor)))].map((instructor) => (
+                                        <button
+                                            key={instructor}
+                                            onClick={() => toggleInstructor(instructor)}
+                                            className={`px-2 py-1 text-xs font-medium rounded transition-colors duration-150
+                                                ${selectedInstructors.includes(instructor)
+                                                    ? 'bg-red-50 text-red-700 ring-1 ring-red-200'
+                                                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                                        >
+                                            {instructor}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* Updated component props to include selectedInstructors and filteredGpaData */}
-                {gpaData.length > 0 &&
-                    <GpaLineGraph
-                        data={filteredGpaData}
-                        selectedInstructors={selectedInstructors}
-                    />
-                }
+                <AnimatePresence>
+                    {gpaData.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -30 }}
+                            transition={{
+                                duration: 0.6,
+                                delay: 0.2,
+                                ease: "easeOut"
+                            }}
+                            className="w-full"
+                        >
+                            <GpaLineGraph
+                                data={filteredGpaData}
+                                selectedInstructors={selectedInstructors}
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-                {courseData.length > 0 &&
-                    <CourseDataTable
-                        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-                        data={courseData.filter((row: OurCourseData) =>
-                            selectedInstructors.includes(String(row.instructor)) &&
-                            selectedSeasons.includes(row.term.split(' ')[0])
-                        ) as any}
-                    />
-                }
+                <AnimatePresence>
+                    {courseData.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -30 }}
+                            transition={{
+                                duration: 0.6,
+                                delay: 0.3,
+                                ease: "easeOut"
+                            }}
+                            className="w-full"
+                        >
+                            <CourseDataTable
+                                /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+                                data={courseData.filter((row: OurCourseData) =>
+                                    selectedInstructors.includes(String(row.instructor)) &&
+                                    selectedSeasons.includes(row.term.split(' ')[0])
+                                ) as any}
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </main>
 
             <footer className="py-4 text-center text-gray-500 text-sm border-t border-red-100 mt-auto">
