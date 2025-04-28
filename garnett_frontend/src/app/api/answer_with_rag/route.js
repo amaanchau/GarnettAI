@@ -45,22 +45,22 @@ const fetchCourseInfo = async (course) => {
   const client = await pool.connect();
   try {
     const perTermQuery = `
-      SELECT instructor, term, COUNT(*) AS num_sections_in_term,
-             ROUND(AVG(average_gpa)::numeric, 3) AS avg_gpa_in_term
-      FROM ${table}
-      GROUP BY instructor, term
-      ORDER BY instructor, term;
-    `;
-    const overallQuery = `
-      SELECT instructor, COUNT(*) AS total_sections,
-             ROUND(AVG(average_gpa)::numeric, 3) AS overall_avg_gpa
-      FROM ${table}
-      GROUP BY instructor
-      ORDER BY overall_avg_gpa DESC;
+  SELECT instructor, term, COUNT(*) AS num_sections_in_term,
+         ROUND(AVG(average_gpa)::numeric, 2) AS avg_gpa_in_term
+  FROM ${table}
+  GROUP BY instructor, term
+  ORDER BY avg_gpa_in_term DESC
     `;
 
     const perTerm = (await client.query(perTermQuery)).rows;
-    const overall = (await client.query(overallQuery)).rows;
+    
+    // Create an overall array with just instructors for backwards compatibility
+    const instructorSet = new Set();
+    perTerm.forEach(row => instructorSet.add(row.instructor));
+    const overall = Array.from(instructorSet).map(instructor => {
+      return { instructor };
+    });
+    
     return { per_term: perTerm, overall };
   } finally {
     client.release();
@@ -195,7 +195,14 @@ ${contextInfo}
 
 Current user question: "${query}"
 
-USE THE GPA DATA FROM Course information: ${courseDataString}, and the RateMyProfessor information: ${profDataString}, to tailor more detailed responses.
+USE THE GPA DATA FROM Course information: ${courseDataString}, and the RateMyProfessor information: ${profDataString}, to tailor detailed responses.
+CRITICALLY IMPORTANT: When users ask about the "easiest" professor or class:
+1. First compare by average GPA - professors with higher GPAs should typically rank higher
+2. When GPAs are within 0.2 points of each other, use RateMyProfessor ratings to determine the ranking
+3. Present information in conversational, flowing paragraphs rather than lists
+4. Synthesize the GPA data, term information, and RateMyProfessor feedback (ratings, difficulty, tags) into cohesive descriptions
+5. Recommend the professor who offers the best balance of high GPA and positive RateMyProfessor feedback
+
 If the user is comparing multiple courses, provide information about all requested courses.
 Make your response Aggie themed and in a readable format with emojis.
 DO NOT just spit out the data you receive, synthesize and understand the data so that you can form descriptive recommendations for professors/classes.
@@ -253,7 +260,7 @@ const answerWithRag = async (query, conversationHistory = [], sessionContext = n
   );
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
+    model: 'gpt-4o',
     messages: [{ role: 'user', content: prompt }],
   });
 
