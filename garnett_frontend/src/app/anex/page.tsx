@@ -3,6 +3,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import Script from 'next/script';
 import { Inter } from 'next/font/google';
 import Navbar from "@/components/Navbar";
 import GpaLineGraph from "@/components/GpaLineGraph";
@@ -324,7 +325,22 @@ export default function AnexPage() {
         }
     };
 
-    return (
+return (
+    <>
+        {/* Google tag (gtag.js) */}
+            <Script
+            src="https://www.googletagmanager.com/gtag/js?id=G-37V4PK7JL4"
+            strategy="afterInteractive"
+            />
+            <Script id="gtag-init" strategy="afterInteractive">
+            {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', 'G-37V4PK7JL4');
+            `}
+            </Script>
+
         <div className={`flex flex-col min-h-screen bg-white ${inter.className}`}>
             <Navbar conversationStarted={false} />
             <main className="flex-grow flex flex-col items-center px-4">
@@ -565,5 +581,7 @@ export default function AnexPage() {
                 <p>© 2025 Aggie AI - Help Texas A&M Students Find the Right Classes</p>
             </footer>
         </div>
+    );
+    </>
     );
 }
