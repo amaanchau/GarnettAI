@@ -191,7 +191,7 @@ export default function Home() {
       icon: "👨‍🏫"
     },
     {
-      text: "How does Leyk grade in CSCE 221?",
+      text: "How does Larry May grade in PHYS 206?",
       icon: "📊"
     },
     {
