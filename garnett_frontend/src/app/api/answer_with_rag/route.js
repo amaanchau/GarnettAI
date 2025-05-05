@@ -40,6 +40,26 @@ const extractCourseAndProfessor = (query) => {
   return courses.length > 0 ? courses[0] : null;
 };
 
+// Check if a course exists in the database
+const checkCourseExists = async (course) => {
+  const table = course.toLowerCase().replace(' ', '');
+  const client = await pool.connect();
+  try {
+    // Check if table exists in the database
+    const query = `
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        AND table_name = $1
+      )
+    `;
+    const { rows } = await client.query(query, [table]);
+    return rows[0].exists;
+  } finally {
+    client.release();
+  }
+};
+
 const fetchCourseInfo = async (course) => {
   const table = course.toLowerCase().replace(' ', '');
   const client = await pool.connect();
@@ -62,12 +82,19 @@ const fetchCourseInfo = async (course) => {
     });
     
     return { per_term: perTerm, overall };
+  } catch (error) {
+    console.error(`Error fetching course info for ${course}:`, error);
+    return { per_term: [], overall: [] };
   } finally {
     client.release();
   }
 };
 
 const fetchProfInfo = async (overall) => {
+  if (!overall || overall.length === 0) {
+    return {};
+  }
+  
   const profNames = overall.map((row) => row.instructor);
   const client = await pool.connect();
   try {
@@ -80,6 +107,9 @@ const fetchProfInfo = async (overall) => {
     const { rows } = await client.query(query, profNames);
     const links = rows.map((row) => row.rmp_link);
     return await scrapeRmpProfessors(links);
+  } catch (error) {
+    console.error('Error fetching professor info:', error);
+    return {};
   } finally {
     client.release();
   }
@@ -92,6 +122,8 @@ const scrapeRmpProfessors = async (urls) => {
   const results = {};
 
   for (const url of urls) {
+    if (!url) continue;
+    
     const profId = url.split('/').pop();
     try {
       const res = await axios.get(url, { headers });
@@ -232,6 +264,45 @@ const answerWithRag = async (query, conversationHistory = [], sessionContext = n
     };
   }
 
+  // Check if all courses exist
+  const invalidCourses = [];
+  for (const course of coursesToUse) {
+    const exists = await checkCourseExists(course);
+    if (!exists) {
+      invalidCourses.push(course);
+    }
+  }
+  
+  // If any invalid courses, return helpful message
+  if (invalidCourses.length > 0) {
+    if (invalidCourses.length === coursesToUse.length) {
+      // All courses are invalid
+      const courseString = invalidCourses.length === 1 
+        ? invalidCourses[0] 
+        : invalidCourses.join(', ');
+      
+      return {
+        answer: `Howdy! I don't have any data for ${courseString}. This might not be a valid Texas A&M course code, or we haven't loaded this course's data yet. Please check the course code and try again, or ask about a different course.`,
+        sessionContext: { 
+          currentCourse: null,
+          activeCourses: coursesToUse.filter(course => !invalidCourses.includes(course))
+        }
+      };
+    } else {
+      // Some courses are valid, some invalid
+      const validCourses = coursesToUse.filter(course => !invalidCourses.includes(course));
+      const invalidString = invalidCourses.join(', ');
+      
+      return {
+        answer: `Howdy! I don't have any data for ${invalidString}. I'll answer based on the other course(s) you mentioned.`,
+        sessionContext: { 
+          currentCourse: validCourses[0],
+          activeCourses: validCourses
+        }
+      };
+    }
+  }
+
   // For backward compatibility and UI indicators
   const primaryCourse = coursesToUse[0]; 
   
@@ -239,38 +310,49 @@ const answerWithRag = async (query, conversationHistory = [], sessionContext = n
   const courseData = {};
   const profData = {};
   
-  for (const course of coursesToUse) {
-    const courseInfo = await fetchCourseInfo(course);
-    courseData[course] = courseInfo;
+  try {
+    for (const course of coursesToUse) {
+      const courseInfo = await fetchCourseInfo(course);
+      courseData[course] = courseInfo;
+      
+      const profInfo = await fetchProfInfo(courseInfo.overall);
+      profData[course] = profInfo;
+    }
     
-    const profInfo = await fetchProfInfo(courseInfo.overall);
-    profData[course] = profInfo;
+    // Build prompt with conversation history and context
+    const prompt = buildPromptWithMultiCourses(
+      query, 
+      conversationHistory, 
+      courseData, 
+      profData, 
+      { 
+        currentCourse: primaryCourse, 
+        activeCourses: coursesToUse 
+      }
+    );
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4.1-mini',
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    return {
+      answer: response.choices[0].message.content,
+      sessionContext: { 
+        currentCourse: primaryCourse,
+        activeCourses: coursesToUse 
+      }
+    };
+  } catch (error) {
+    console.error('[API Error]', error);
+    return {
+      answer: "Whoop! We're having trouble processing your request. Please try again in a few moments.",
+      sessionContext: { 
+        currentCourse: primaryCourse,
+        activeCourses: coursesToUse 
+      }
+    };
   }
-  
-  // Build prompt with conversation history and context
-  const prompt = buildPromptWithMultiCourses(
-    query, 
-    conversationHistory, 
-    courseData, 
-    profData, 
-    { 
-      currentCourse: primaryCourse, 
-      activeCourses: coursesToUse 
-    }
-  );
-
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4.1-mini',
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  return {
-    answer: response.choices[0].message.content,
-    sessionContext: { 
-      currentCourse: primaryCourse,
-      activeCourses: coursesToUse 
-    }
-  };
 };
 
 export async function POST(req) {
