@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip, Legend, ResponsiveContainer
@@ -61,32 +61,60 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
         });
 
         return (
-            <div className="bg-white p-4 border border-red-100 rounded-xl shadow-md text-sm"
-                style={{ zIndex: 1000, position: 'relative' }}>
-                <p className="font-medium text-gray-900 mb-2">{`Term: ${label}`}</p>
-                {sortedPayload.map((entry, index) => (
-                    <p key={`item-${index}`} className="flex items-center mb-1">
-                        <span className="w-3 h-3 inline-block mr-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
-                        <span className="font-medium">{entry.name}</span>
-                        <span className="ml-2">
-                            {entry.value !== null && entry.value !== undefined ? (
-                                <span className={getGpaColor(entry.value)}>
-                                    {Number(entry.value).toFixed(2)}
-                                </span>
-                            ) : "N/A"}
-                        </span>
-                    </p>
-                ))}
+            <div className="bg-white p-3 border border-red-100 rounded-lg shadow-md text-xs sm:text-sm"
+                style={{ zIndex: 1000, position: 'relative', maxWidth: '90vw' }}>
+                <p className="font-medium text-gray-900 mb-1 text-xs sm:text-sm">{`Term: ${label}`}</p>
+                <div className="max-h-40 overflow-y-auto">
+                    {sortedPayload.map((entry, index) => (
+                        <p key={`item-${index}`} className="flex items-center mb-1 text-xs sm:text-sm">
+                            <span className="w-2 h-2 sm:w-3 sm:h-3 inline-block mr-1 sm:mr-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
+                            <span className="font-medium truncate max-w-[120px] sm:max-w-full">{entry.name}</span>
+                            <span className="ml-1 sm:ml-2">
+                                {entry.value !== null && entry.value !== undefined ? (
+                                    <span className={getGpaColor(entry.value)}>
+                                        {Number(entry.value).toFixed(2)}
+                                    </span>
+                                ) : "N/A"}
+                            </span>
+                        </p>
+                    ))}
+                </div>
             </div>
         );
     }
     return null;
 };
 
-// Removing custom legend component as we're using the built-in one with styling
-
 export default function GpaLineGraph({ data, selectedInstructors }: Props) {
     const [activeInstructor, setActiveInstructor] = useState<string | null>(null);
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Check if the viewport is mobile size
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+
+        // Initial check
+        checkMobile();
+
+        // Add resize listener
+        window.addEventListener('resize', checkMobile);
+
+        // Cleanup
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    // Force re-render when selectedInstructors changes
+    useEffect(() => {
+        // This will trigger a re-render when selectedInstructors changes
+        setActiveInstructor(null);
+    }, [selectedInstructors]);
+
+    // Debug log for troubleshooting - must be called in the same order on every render
+    useEffect(() => {
+        console.log("GpaLineGraph render with", selectedInstructors.length, "instructors selected");
+    }, [selectedInstructors]);
 
     const instructors = [...new Set(data.map((d) => d.instructor))];
     const terms = [...new Set(data.map((d) => d.term))].sort((a, b) => {
@@ -125,17 +153,29 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
         instructor => selectedInstructors.includes(instructor)
     );
 
-    // No data or no selected instructors case
+    // Calculate optimal chart height based on number of instructors
+    const getOptimalChartHeight = () => {
+        // Base height for desktop
+        if (!isMobile) return 400;
+
+        // On mobile, adjust based on number of instructors
+        const instructorCount = selectedInstructors.length;
+        if (instructorCount <= 3) return 350;
+        if (instructorCount <= 6) return 380;
+        return 400; // Max height for many instructors
+    };
+
+    // No data or no selected instructors case - check after all hooks are called
     if (data.length === 0 || selectedInstructors.length === 0) {
         return (
-            <div className={`w-full mt-8 p-6 bg-white rounded-xl shadow-sm border border-red-100 transition-shadow hover:shadow-md ${inter.className}`}>
-                <div className="h-96 flex items-center justify-center text-gray-500">
+            <div className={`w-full mt-8 p-4 sm:p-6 bg-white rounded-xl shadow-sm border border-red-100 transition-shadow hover:shadow-md ${inter.className}`}>
+                <div className="h-60 sm:h-96 flex items-center justify-center text-gray-500">
                     <div className="text-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-red-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 text-red-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
-                        <p className="text-lg font-medium">No data to display</p>
-                        <p className="text-sm mt-2">Please select at least one instructor to view the GPA trends.</p>
+                        <p className="text-base sm:text-lg font-medium">No data to display</p>
+                        <p className="text-xs sm:text-sm mt-2">Please select at least one instructor to view the GPA trends.</p>
                     </div>
                 </div>
             </div>
@@ -143,85 +183,109 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
     }
 
     return (
-        <div className={`w-full mt-8 p-6 bg-white rounded-xl shadow-sm border border-red-100 transition-shadow hover:shadow-md ${inter.className}`}>
-            {/* Removing instructor count warning as requested */}
-            
-            <ResponsiveContainer width="100%" height={400}>
-                <LineChart
-                    data={chartData}
-                    margin={{ top: 10, right: 30, left: 20, bottom: 25 }}
-                    onMouseLeave={() => setActiveInstructor(null)}
-                >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis
-                        dataKey="term"
-                        angle={-45}
-                        textAnchor="end"
-                        height={85}
-                        tick={{ fontSize: 12, fontWeight: "bold" }}
-                        tickMargin={15}
-                        stroke="#616161"
-                    />
-                    <YAxis
-                        domain={[2.8, 4]}
-                        tickCount={6}
-                        tick={{ fontSize: 12, fontWeight: "bold" }}
-                        stroke="#616161"
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend
-                        verticalAlign="top"
-                        height={selectedInstructors.length > 8 ? 72 : selectedInstructors.length > 4 ? 54 : 36}
-                        wrapperStyle={{
-                            paddingBottom: "10px",
-                            fontSize: "13px",
-                            fontWeight: 500,
-                            paddingLeft: "10px",
-                            paddingRight: "10px",
-                            display: "flex",
-                            flexWrap: "wrap",
-                            justifyContent: "center",
-                            gap: "8px",
-                            lineHeight: "1.2"
-                        }}
-                        onMouseEnter={(e) => setActiveInstructor((e as unknown as { dataKey: string }).dataKey)}
-                        onMouseLeave={() => setActiveInstructor(null)}
-                    />
-                    {instructors.map((instructor, index) => {
-                        // Only render the line if the instructor is in the selectedInstructors array
-                        if (!selectedInstructors.includes(instructor)) {
-                            return null;
-                        }
+        <div className={`w-full mt-8 p-4 sm:p-6 bg-white rounded-xl shadow-sm border border-red-100 transition-shadow hover:shadow-md ${inter.className}`}>
+            {/* Mobile optimization hint for many instructors */}
+            {isMobile && selectedInstructors.length > 5 && (
+                <div className="mb-3 p-2 bg-red-50 rounded-lg text-center">
+                    <span className="text-xs text-red-600">
+                        Tip: Rotate your device horizontally for a better view of multiple instructors
+                    </span>
+                </div>
+            )}
 
-                        return (
-                            <Line
-                                key={instructor}
-                                type="monotone"
-                                dataKey={instructor}
-                                name={instructor}
-                                stroke={colors[index % colors.length]}
-                                strokeWidth={activeInstructor === instructor ? 3 : 2}
-                                opacity={activeInstructor ? (activeInstructor === instructor ? 1 : 0.3) : 1}
-                                dot={{
-                                    r: 4,
-                                    strokeWidth: 1,
-                                    fill: colors[index % colors.length],
-                                    stroke: colors[index % colors.length]
-                                }}
-                                activeDot={{
-                                    r: 6,
-                                    strokeWidth: 2,
-                                    fill: colors[index % colors.length],
-                                    stroke: "#FFFFFF",
-                                    filter: "drop-shadow(0px 0px 4px rgba(0, 0, 0, 0.3))"
-                                }}
-                                connectNulls
-                            />
-                        );
-                    })}
-                </LineChart>
-            </ResponsiveContainer>
-            {/* Removing additional instructor list as requested */}
+            {/* Chart container with dynamic height */}
+            <div className="w-full" style={{ height: `${getOptimalChartHeight()}px` }}>
+                <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                        data={chartData}
+                        margin={isMobile
+                            ? { top: 10, right: 10, left: 0, bottom: 60 }
+                            : { top: 10, right: 30, left: 20, bottom: 25 }}
+                        onMouseLeave={() => setActiveInstructor(null)}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis
+                            dataKey="term"
+                            angle={-45}
+                            textAnchor="end"
+                            height={isMobile ? 60 : 85}
+                            tick={{ fontSize: isMobile ? 10 : 12, fontWeight: "bold" }}
+                            tickMargin={isMobile ? 10 : 15}
+                            stroke="#616161"
+                            interval={isMobile ? (terms.length > 6 ? 1 : 0) : 0}
+                        />
+                        <YAxis
+                            domain={[2.8, 4]}
+                            tickCount={isMobile ? 4 : 6}
+                            tick={{ fontSize: isMobile ? 10 : 12, fontWeight: "bold" }}
+                            stroke="#616161"
+                            width={isMobile ? 25 : 35}
+                        />
+                        <Tooltip content={<CustomTooltip />} />
+
+                        {/* Mobile-optimized Legend with horizontal scrolling */}
+                        <Legend
+                            verticalAlign="top"
+                            height={isMobile ? 36 : (selectedInstructors.length > 8 ? 72 : selectedInstructors.length > 4 ? 54 : 36)}
+                            layout={isMobile ? "horizontal" : "horizontal"}
+                            wrapperStyle={{
+                                paddingBottom: isMobile ? "5px" : "10px",
+                                fontSize: isMobile ? "10px" : "13px",
+                                fontWeight: 500,
+                                paddingLeft: isMobile ? "2px" : "10px",
+                                paddingRight: isMobile ? "2px" : "10px",
+                                display: "flex",
+                                flexWrap: isMobile ? "nowrap" : "wrap",
+                                justifyContent: "center",
+                                gap: isMobile ? "2px" : "8px",
+                                lineHeight: "1.2",
+                                margin: 0,
+                                overflow: isMobile ? "auto" : "visible",
+                                overflowX: isMobile ? "auto" : "visible",
+                                whiteSpace: isMobile ? "nowrap" : "normal",
+                                maxWidth: "100%"
+                            }}
+                            onMouseEnter={(e) => setActiveInstructor((e as unknown as { dataKey: string }).dataKey)}
+                            onMouseLeave={() => setActiveInstructor(null)}
+                            onClick={(e) => isMobile && setActiveInstructor((e as unknown as { dataKey: string }).dataKey)}
+                        />
+
+                        {/* Lines for all selected instructors */}
+                        {instructors.map((instructor, index) => {
+                            // Only render the line if the instructor is in the selectedInstructors array
+                            if (!selectedInstructors.includes(instructor)) {
+                                return null;
+                            }
+
+                            return (
+                                <Line
+                                    key={instructor}
+                                    type="monotone"
+                                    dataKey={instructor}
+                                    name={instructor}
+                                    stroke={colors[index % colors.length]}
+                                    strokeWidth={activeInstructor === instructor ? 3 : (isMobile ? 1.5 : 2)}
+                                    opacity={activeInstructor ? (activeInstructor === instructor ? 1 : 0.3) : 1}
+                                    dot={{
+                                        r: isMobile ? 3 : 4,
+                                        strokeWidth: 1,
+                                        fill: colors[index % colors.length],
+                                        stroke: colors[index % colors.length]
+                                    }}
+                                    activeDot={{
+                                        r: isMobile ? 5 : 6,
+                                        strokeWidth: isMobile ? 1 : 2,
+                                        fill: colors[index % colors.length],
+                                        stroke: "#FFFFFF",
+                                        filter: "drop-shadow(0px 0px 4px rgba(0, 0, 0, 0.3))"
+                                    }}
+                                    connectNulls
+                                />
+                            );
+                        })}
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
         </div>
     );
 }
