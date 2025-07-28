@@ -15,12 +15,18 @@ const pool = new Pool({
 // In-memory cache for RateMyProfessor data
 const rmpCache = new Map();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const MAX_CACHE_SIZE = 1500; // Maximum number of professors to cache (~6MB memory)
 
 // Cache helper functions
 const getCachedRmpData = (profId) => {
   const cached = rmpCache.get(profId);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     console.log(`Cache hit for professor ${profId}`);
+    
+    // Move to end for LRU (Least Recently Used) tracking
+    rmpCache.delete(profId);
+    rmpCache.set(profId, cached);
+    
     return cached.data;
   }
   if (cached) {
@@ -31,18 +37,41 @@ const getCachedRmpData = (profId) => {
 };
 
 const setCachedRmpData = (profId, data) => {
+  // If cache is at max size, remove the oldest entry (LRU eviction)
+  if (rmpCache.size >= MAX_CACHE_SIZE) {
+    const oldestKey = rmpCache.keys().next().value;
+    rmpCache.delete(oldestKey);
+    console.log(`Cache evicted oldest entry: ${oldestKey} (cache full at ${MAX_CACHE_SIZE})`);
+  }
+  
   rmpCache.set(profId, {
     data,
     timestamp: Date.now()
   });
-  console.log(`Cached data for professor ${profId}`);
+  console.log(`Cached data for professor ${profId} (cache size: ${rmpCache.size}/${MAX_CACHE_SIZE})`);
 };
 
 // Cache stats for monitoring
 const getCacheStats = () => {
+  const now = Date.now();
+  let expired = 0;
+  let valid = 0;
+  
+  for (const [, cached] of rmpCache.entries()) {
+    if (now - cached.timestamp > CACHE_DURATION) {
+      expired++;
+    } else {
+      valid++;
+    }
+  }
+  
   return {
     size: rmpCache.size,
-    entries: Array.from(rmpCache.keys())
+    maxSize: MAX_CACHE_SIZE,
+    valid,
+    expired,
+    utilizationPercent: Math.round((rmpCache.size / MAX_CACHE_SIZE) * 100),
+    entries: Array.from(rmpCache.keys()).slice(0, 10) // Show first 10 for debugging
   };
 };
 
