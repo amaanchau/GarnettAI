@@ -48,6 +48,8 @@ export default function Home() {
     currentCourse: null,
     activeCourses: []
   });
+  const [streamingResponse, setStreamingResponse] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -108,12 +110,12 @@ export default function Home() {
     }
   }, [inputValue]);
 
-  // Scroll to bottom of chat when messages change
+  // Scroll to bottom of chat when messages or streaming response changes
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, streamingResponse]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,14 +135,16 @@ export default function Home() {
     // Clear the input after submission
     setInputValue('');
 
-    // Set loading state
+    // Set loading and streaming state
     setIsLoading(true);
+    setIsStreaming(true);
+    setStreamingResponse('');
 
     try {
       // Get last 10 messages for context
       const conversationHistory = messages.slice(-8);
 
-      // Create fetch request to the API endpoint
+      // Create fetch request to the API endpoint with streaming
       const response = await fetch('/api/answer_with_rag', {
         method: 'POST',
         headers: {
@@ -149,7 +153,8 @@ export default function Home() {
         body: JSON.stringify({
           query: userMessage,
           conversationHistory: conversationHistory,
-          sessionContext: sessionContext
+          sessionContext: sessionContext,
+          useStreaming: true
         }),
       });
 
@@ -157,20 +162,69 @@ export default function Home() {
         throw new Error(`Server responded with ${response.status}`);
       }
 
-      // Parse the JSON response
-      const data = await response.json();
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
 
-      // Add AI's response to chat
-      setMessages(prev => [...prev, {
-        content: data.answer,
-        isUser: false,
-        id: Date.now().toString()
-      }]);
-
-      // Update session context if returned in the response
-      if (data.sessionContext) {
-        setSessionContext(data.sessionContext);
+      if (!reader) {
+        throw new Error('No response body available');
       }
+
+      let accumulatedResponse = '';
+      let finalSessionContext = sessionContext;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+
+              switch (data.type) {
+                case 'status':
+                  // Ignore status updates - we removed progress display
+                  break;
+
+                case 'chunk':
+                  accumulatedResponse += data.content;
+                  // Add delay to control streaming speed
+                  await new Promise(resolve => setTimeout(resolve, 55)); // 50ms delay - adjust this value
+                  setStreamingResponse(accumulatedResponse);
+                  break;
+
+                case 'complete':
+                  accumulatedResponse = data.answer;
+                  setStreamingResponse(accumulatedResponse);
+                  finalSessionContext = data.sessionContext;
+                  
+                  // Add final complete message to chat
+                  setMessages(prev => [...prev, {
+                    content: data.answer,
+                    isUser: false,
+                    id: Date.now().toString()
+                  }]);
+
+                  // Update session context
+                  if (data.sessionContext) {
+                    setSessionContext(data.sessionContext);
+                  }
+                  break;
+
+                case 'error':
+                  throw new Error(data.error);
+              }
+            } catch (parseError) {
+              console.warn('Failed to parse SSE message:', line);
+            }
+          }
+        }
+      }
+
     } catch (error) {
       console.error("API Error:", error);
       // Handle exception
@@ -181,6 +235,8 @@ export default function Home() {
       }]);
     } finally {
       setIsLoading(false);
+      setIsStreaming(false);
+      setStreamingResponse('');
     }
   };
 
@@ -351,7 +407,34 @@ export default function Home() {
                 ))}
               </div>
             )}
-            {isLoading && (
+            {/* Streaming response display */}
+            {isStreaming && (
+              <div className={conversationStarted ? "w-full max-w-7xl mx-auto px-4" : ""}>
+                <div className="flex mb-4 justify-start w-full">
+                  <div className="p-3 rounded-xl rounded-tl-none bg-white text-gray-800 max-w-[1000px] text-lg">
+                    {/* Streaming text */}
+                    {streamingResponse ? (
+                      <div style={{ whiteSpace: 'pre-line' }}>
+                        <span dangerouslySetInnerHTML={formatMessage(streamingResponse)} />
+                        <span className="inline-block w-0.5 h-6 bg-gray-800 animate-pulse ml-0.5"></span>
+                      </div>
+                    ) : (
+                      /* Simple typing indicator while waiting for response */
+                      <div className="flex items-center text-gray-500">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Fallback loading indicator for non-streaming */}
+            {isLoading && !isStreaming && (
               <div className={conversationStarted ? "w-full max-w-7xl mx-auto px-4" : ""}>
                 <div className="flex mb-4 justify-start w-full">
                   <div className="p-3 rounded-xl rounded-tl-none flex items-center inline-block">
@@ -379,24 +462,26 @@ export default function Home() {
                 onFocus={() => setIsTyping(true)}
                 onBlur={() => setIsTyping(inputValue.length > 0)}
                 placeholder={
-                  sessionContext.activeCourses && sessionContext.activeCourses.length > 0
+                  isStreaming
+                    ? "Please wait for the current response to complete..."
+                    : sessionContext.activeCourses && sessionContext.activeCourses.length > 0
                     ? sessionContext.activeCourses.length === 1
                       ? `Ask about ${sessionContext.activeCourses[0]}...`
                       : `Ask about ${sessionContext.activeCourses[0]} and ${sessionContext.activeCourses.length - 1} other course${sessionContext.activeCourses.length > 2 ? 's' : ''}...`
                     : "Howdy, what class can I help you with?"
                 }
-                className={`w-full py-4 px-5 pr-16 rounded-xl border text-lg ${isTyping ? 'border-red-500 ring-2 ring-red-100' : 'border-red-100'} outline-none resize-none overflow-hidden transition-all`}
+                className={`w-full py-4 px-5 pr-16 rounded-xl border text-lg ${isTyping ? 'border-red-500 ring-2 ring-red-100' : 'border-red-100'} outline-none resize-none overflow-hidden transition-all ${isStreaming ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                 style={{ minHeight: '60px', maxHeight: '200px' }}
                 rows={1}
-                disabled={isLoading}
+                disabled={isLoading || isStreaming}
               />
               <motion.button
                 type="submit"
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.05 }}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-10 h-10 flex items-center justify-center ${inputValue.trim() && !isLoading ? 'bg-red-300 text-white' : 'bg-red-100 text-red-300'
+                className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-10 h-10 flex items-center justify-center ${inputValue.trim() && !isLoading && !isStreaming ? 'bg-red-300 text-white' : 'bg-red-100 text-red-300'
                   } transition-colors`}
-                disabled={!inputValue.trim() || isLoading}
+                disabled={!inputValue.trim() || isLoading || isStreaming}
                 style={{ lineHeight: 1 }} // Ensure proper centering
               >
                 {isLoading ? (

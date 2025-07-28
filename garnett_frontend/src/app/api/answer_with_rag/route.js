@@ -12,6 +12,40 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// In-memory cache for RateMyProfessor data
+const rmpCache = new Map();
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+// Cache helper functions
+const getCachedRmpData = (profId) => {
+  const cached = rmpCache.get(profId);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    console.log(`Cache hit for professor ${profId}`);
+    return cached.data;
+  }
+  if (cached) {
+    console.log(`Cache expired for professor ${profId}`);
+    rmpCache.delete(profId); // Clean up expired entries
+  }
+  return null;
+};
+
+const setCachedRmpData = (profId, data) => {
+  rmpCache.set(profId, {
+    data,
+    timestamp: Date.now()
+  });
+  console.log(`Cached data for professor ${profId}`);
+};
+
+// Cache stats for monitoring
+const getCacheStats = () => {
+  return {
+    size: rmpCache.size,
+    entries: Array.from(rmpCache.keys())
+  };
+};
+
 // Function to extract multiple courses from a query
 const extractCoursesAndProfessors = (query) => {
   // Regular expression to find course codes like CSCE 221, MATH 151, etc.
@@ -55,6 +89,35 @@ const checkCourseExists = async (course) => {
     `;
     const { rows } = await client.query(query, [table]);
     return rows[0].exists;
+  } finally {
+    client.release();
+  }
+};
+
+// Batch check if multiple courses exist in the database (more efficient)
+const checkMultipleCoursesExist = async (courses) => {
+  if (!courses || courses.length === 0) return {};
+  
+  const tables = courses.map(course => course.toLowerCase().replace(' ', ''));
+  const client = await pool.connect();
+  try {
+    const placeholders = tables.map((_, i) => `$${i + 1}`).join(', ');
+    const query = `
+      SELECT table_name
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      AND table_name IN (${placeholders})
+    `;
+    const { rows } = await client.query(query, tables);
+    const existingTables = new Set(rows.map(row => row.table_name));
+    
+    const results = {};
+    courses.forEach(course => {
+      const table = course.toLowerCase().replace(' ', '');
+      results[course] = existingTables.has(table);
+    });
+    
+    return results;
   } finally {
     client.release();
   }
@@ -120,13 +183,52 @@ const scrapeRmpProfessors = async (urls) => {
     'User-Agent': 'Mozilla/5.0',
   };
   const results = {};
+  let cacheHits = 0;
+  let cacheMisses = 0;
 
+  console.log(`Processing ${urls.length} professor URLs`);
+
+  // First, quickly check cache for all URLs
+  const urlsToScrape = [];
   for (const url of urls) {
     if (!url) continue;
     
     const profId = url.split('/').pop();
+    
+    // Check cache first
+    const cachedData = getCachedRmpData(profId);
+    if (cachedData) {
+      results[profId] = cachedData;
+      cacheHits++;
+    } else {
+      urlsToScrape.push(url);
+      cacheMisses++;
+    }
+  }
+
+  console.log(`Cache check complete: ${cacheHits} cache hits, ${cacheMisses} URLs need scraping`);
+
+  if (urlsToScrape.length === 0) {
+    console.log('All data available from cache!');
+    return results;
+  }
+
+  // Scrape remaining URLs in parallel with controlled concurrency
+  const CONCURRENCY_LIMIT = 3; // Don't overwhelm RMP servers
+  console.log(`Starting parallel scraping of ${urlsToScrape.length} URLs with concurrency limit of ${CONCURRENCY_LIMIT}`);
+  
+  const scrapingStartTime = Date.now();
+
+  // Helper function to scrape a single professor
+  const scrapeSingleProfessor = async (url) => {
+    const profId = url.split('/').pop();
+    console.log(`Scraping fresh data for professor ${profId}`);
+    
     try {
-      const res = await axios.get(url, { headers });
+      const res = await axios.get(url, { 
+        headers,
+        timeout: 8000 // Reduced timeout for faster failures
+      });
       const $ = cheerio.load(res.data);
 
       const professorData = {
@@ -187,13 +289,49 @@ const scrapeRmpProfessors = async (urls) => {
       professorData.attendance_stats = professor_attendance_stats;
       professorData.textbook_stats = professor_textbook_stats;
 
-      results[profId] = professorData;
-
-      await new Promise((r) => setTimeout(r, 500)); // Be nice to RMP
+      // Cache the scraped data
+      setCachedRmpData(profId, professorData);
+      console.log(`Successfully scraped professor ${profId}`);
+      
+      return { profId, data: professorData };
     } catch (e) {
-      results[profId] = { error: e.message };
+      const errorData = { error: e.message };
+      // Cache errors too to avoid repeated failed requests
+      setCachedRmpData(profId, errorData);
+      console.error(`Error scraping professor ${profId}:`, e.message);
+      return { profId, data: errorData };
+    }
+  };
+
+  // Process URLs in batches with controlled concurrency
+  const chunks = [];
+  for (let i = 0; i < urlsToScrape.length; i += CONCURRENCY_LIMIT) {
+    chunks.push(urlsToScrape.slice(i, i + CONCURRENCY_LIMIT));
+  }
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    console.log(`Processing batch ${i + 1}/${chunks.length} (${chunk.length} URLs)`);
+    
+    const chunkPromises = chunk.map(scrapeSingleProfessor);
+    const chunkResults = await Promise.all(chunkPromises);
+    
+    // Store results
+    chunkResults.forEach(({ profId, data }) => {
+      results[profId] = data;
+    });
+
+    // Small delay between batches to be respectful to RMP
+    if (i < chunks.length - 1) {
+      console.log('Waiting 300ms before next batch...');
+      await new Promise(r => setTimeout(r, 300));
     }
   }
+
+  const scrapingTime = Date.now() - scrapingStartTime;
+  console.log(`RMP scraping complete in ${scrapingTime}ms: ${cacheHits} cache hits, ${cacheMisses} cache misses`);
+  console.log(`Average time per scraped professor: ${Math.round(scrapingTime / cacheMisses)}ms`);
+  console.log(`Cache stats:`, getCacheStats());
 
   return results;
 };
@@ -241,6 +379,207 @@ DO NOT just spit out the data you receive, synthesize and understand the data so
 Unless asked, DO NOT give any links and keep the answer concise.`;
 };
 
+// Streaming version of answerWithRag
+const answerWithRagStreaming = async (query, conversationHistory = [], sessionContext = null, controller, encoder, requestStartTime) => {
+  const sendUpdate = (type, data) => {
+    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type, ...data })}\n\n`));
+  };
+
+  // Extract all courses from the query
+  const coursesInQuery = extractCoursesAndProfessors(query);
+  
+  // Determine which courses to use
+  let coursesToUse = [];
+  
+  if (coursesInQuery.length > 0) {
+    coursesToUse = coursesInQuery;
+  } else if (sessionContext?.activeCourses?.length > 0) {
+    coursesToUse = sessionContext.activeCourses;
+  }
+  
+  if (coursesToUse.length === 0) {
+    sendUpdate('complete', {
+      answer: "Howdy! Please include a course name in your prompt (ex: CSCE 221) so I can help you better.",
+      sessionContext: { currentCourse: null, activeCourses: [] },
+      _metadata: { responseTime: Date.now() - requestStartTime }
+    });
+    return;
+  }
+
+  sendUpdate('status', { 
+    message: `Found courses: ${coursesToUse.join(', ')}. Checking availability...`, 
+    progress: 10 
+  });
+
+  // Check if all courses exist (single optimized query)
+  console.log('Checking course existence with batch query...');
+  const courseExistsStartTime = Date.now();
+  
+  const existenceResults = await checkMultipleCoursesExist(coursesToUse);
+  const invalidCourses = coursesToUse.filter(course => !existenceResults[course]);
+    
+  console.log(`Course existence check completed in ${Date.now() - courseExistsStartTime}ms`);
+  
+  if (invalidCourses.length > 0) {
+    if (invalidCourses.length === coursesToUse.length) {
+      const courseString = invalidCourses.length === 1 
+        ? invalidCourses[0] 
+        : invalidCourses.join(', ');
+      
+      sendUpdate('complete', {
+        answer: `Howdy! I don't have any data for ${courseString}. This might not be a valid Texas A&M course code, or we haven't loaded this course's data yet. Please check the course code and try again, or ask about a different course.`,
+        sessionContext: { 
+          currentCourse: null,
+          activeCourses: coursesToUse.filter(course => !invalidCourses.includes(course))
+        },
+        _metadata: { responseTime: Date.now() - requestStartTime }
+      });
+      return;
+    } else {
+      const validCourses = coursesToUse.filter(course => !invalidCourses.includes(course));
+      const invalidString = invalidCourses.join(', ');
+      
+      sendUpdate('complete', {
+        answer: `Howdy! I don't have any data for ${invalidString}. I'll answer based on the other course(s) you mentioned.`,
+        sessionContext: { 
+          currentCourse: validCourses[0],
+          activeCourses: validCourses
+        },
+        _metadata: { responseTime: Date.now() - requestStartTime }
+      });
+      return;
+    }
+  }
+
+  const primaryCourse = coursesToUse[0]; 
+  
+  sendUpdate('status', { 
+    message: 'Collecting course and professor data...', 
+    progress: 20 
+  });
+
+  const courseData = {};
+  const profData = {};
+  
+  try {
+    console.log(`Processing ${coursesToUse.length} courses in parallel:`, coursesToUse);
+    const startTime = Date.now();
+    
+    // Step 1: Fetch all course info in parallel
+    console.log('Step 1: Fetching course info for all courses in parallel...');
+    const courseInfoPromises = coursesToUse.map(async (course) => {
+      const courseStartTime = Date.now();
+      console.log(`Fetching course info for ${course}`);
+      
+      const courseInfo = await fetchCourseInfo(course);
+      console.log(`Course info for ${course} fetched in ${Date.now() - courseStartTime}ms`);
+      
+      return { course, courseInfo };
+    });
+    
+    const courseResults = await Promise.all(courseInfoPromises);
+    
+    courseResults.forEach(({ course, courseInfo }) => {
+      courseData[course] = courseInfo;
+    });
+    
+    const courseInfoTime = Date.now() - startTime;
+    console.log(`All course info fetched in ${courseInfoTime}ms`);
+    
+    sendUpdate('status', { 
+      message: 'Course data collected. Gathering professor reviews...', 
+      progress: 40 
+    });
+    
+    // Step 2: Fetch all professor info in parallel
+    console.log('Step 2: Fetching professor info for all courses in parallel...');
+    const profInfoStartTime = Date.now();
+    
+    const profInfoPromises = courseResults.map(async ({ course, courseInfo }) => {
+      const profStartTime = Date.now();
+      console.log(`Fetching professor info for ${course} (${courseInfo.overall.length} professors)`);
+      
+      const profInfo = await fetchProfInfo(courseInfo.overall);
+      console.log(`Professor info for ${course} fetched in ${Date.now() - profStartTime}ms`);
+      
+      return { course, profInfo };
+    });
+    
+    const profResults = await Promise.all(profInfoPromises);
+    
+    profResults.forEach(({ course, profInfo }) => {
+      profData[course] = profInfo;
+    });
+    
+    const profInfoTime = Date.now() - profInfoStartTime;
+    console.log(`All professor info fetched in ${profInfoTime}ms`);
+    console.log(`Total data fetching completed in ${Date.now() - startTime}ms (Course Info: ${courseInfoTime}ms, Prof Info: ${profInfoTime}ms)`);
+    
+    sendUpdate('status', { 
+      message: 'Generating personalized recommendation...', 
+      progress: 70 
+    });
+    
+    // Build prompt with conversation history and context
+    const prompt = buildPromptWithMultiCourses(
+      query, 
+      conversationHistory, 
+      courseData, 
+      profData, 
+      { 
+        currentCourse: primaryCourse, 
+        activeCourses: coursesToUse 
+      }
+    );
+
+    console.log(`Prompt built, calling OpenAI API with streaming...`);
+    const openaiStartTime = Date.now();
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      stream: true,
+    });
+
+    console.log(`OpenAI streaming API call initiated in ${Date.now() - openaiStartTime}ms`);
+
+    sendUpdate('status', { 
+      message: 'AI is writing your response...', 
+      progress: 80 
+    });
+
+    let fullAnswer = '';
+    
+    for await (const chunk of response) {
+      const content = chunk.choices[0]?.delta?.content || '';
+      if (content) {
+        fullAnswer += content;
+        sendUpdate('chunk', { content });
+      }
+    }
+
+    console.log(`OpenAI streaming completed in ${Date.now() - openaiStartTime}ms`);
+
+    sendUpdate('complete', {
+      answer: fullAnswer,
+      sessionContext: { 
+        currentCourse: primaryCourse,
+        activeCourses: coursesToUse 
+      },
+      _metadata: {
+        responseTime: Date.now() - requestStartTime,
+        cacheStats: getCacheStats()
+      }
+    });
+
+  } catch (error) {
+    console.error('[API Error]', error);
+    sendUpdate('error', {
+      error: "Whoop! We're having trouble processing your request. Please try again in a few moments."
+    });
+  }
+};
+
 const answerWithRag = async (query, conversationHistory = [], sessionContext = null) => {
   // Extract all courses from the query
   const coursesInQuery = extractCoursesAndProfessors(query);
@@ -264,14 +603,14 @@ const answerWithRag = async (query, conversationHistory = [], sessionContext = n
     };
   }
 
-  // Check if all courses exist
-  const invalidCourses = [];
-  for (const course of coursesToUse) {
-    const exists = await checkCourseExists(course);
-    if (!exists) {
-      invalidCourses.push(course);
-    }
-  }
+  // Check if all courses exist (single optimized query)
+  console.log('Checking course existence with batch query...');
+  const courseExistsStartTime = Date.now();
+  
+  const existenceResults = await checkMultipleCoursesExist(coursesToUse);
+  const invalidCourses = coursesToUse.filter(course => !existenceResults[course]);
+    
+  console.log(`Course existence check completed in ${Date.now() - courseExistsStartTime}ms`);
   
   // If any invalid courses, return helpful message
   if (invalidCourses.length > 0) {
@@ -311,13 +650,55 @@ const answerWithRag = async (query, conversationHistory = [], sessionContext = n
   const profData = {};
   
   try {
-    for (const course of coursesToUse) {
+    console.log(`Processing ${coursesToUse.length} courses in parallel:`, coursesToUse);
+    const startTime = Date.now();
+    
+    // Step 1: Fetch all course info in parallel
+    console.log('Step 1: Fetching course info for all courses in parallel...');
+    const courseInfoPromises = coursesToUse.map(async (course) => {
+      const courseStartTime = Date.now();
+      console.log(`Fetching course info for ${course}`);
+      
       const courseInfo = await fetchCourseInfo(course);
+      console.log(`Course info for ${course} fetched in ${Date.now() - courseStartTime}ms`);
+      
+      return { course, courseInfo };
+    });
+    
+    const courseResults = await Promise.all(courseInfoPromises);
+    
+    // Store course data
+    courseResults.forEach(({ course, courseInfo }) => {
       courseData[course] = courseInfo;
+    });
+    
+    const courseInfoTime = Date.now() - startTime;
+    console.log(`All course info fetched in ${courseInfoTime}ms`);
+    
+    // Step 2: Fetch all professor info in parallel
+    console.log('Step 2: Fetching professor info for all courses in parallel...');
+    const profInfoStartTime = Date.now();
+    
+    const profInfoPromises = courseResults.map(async ({ course, courseInfo }) => {
+      const profStartTime = Date.now();
+      console.log(`Fetching professor info for ${course} (${courseInfo.overall.length} professors)`);
       
       const profInfo = await fetchProfInfo(courseInfo.overall);
+      console.log(`Professor info for ${course} fetched in ${Date.now() - profStartTime}ms`);
+      
+      return { course, profInfo };
+    });
+    
+    const profResults = await Promise.all(profInfoPromises);
+    
+    // Store professor data
+    profResults.forEach(({ course, profInfo }) => {
       profData[course] = profInfo;
-    }
+    });
+    
+    const profInfoTime = Date.now() - profInfoStartTime;
+    console.log(`All professor info fetched in ${profInfoTime}ms`);
+    console.log(`Total data fetching completed in ${Date.now() - startTime}ms (Course Info: ${courseInfoTime}ms, Prof Info: ${profInfoTime}ms)`);
     
     // Build prompt with conversation history and context
     const prompt = buildPromptWithMultiCourses(
@@ -331,10 +712,15 @@ const answerWithRag = async (query, conversationHistory = [], sessionContext = n
       }
     );
 
+    console.log(`Prompt built, calling OpenAI API...`);
+    const openaiStartTime = Date.now();
+
     const response = await openai.chat.completions.create({
-      model: 'gpt-4.1-mini',
+      model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
     });
+
+    console.log(`OpenAI API call completed in ${Date.now() - openaiStartTime}ms`);
 
     return {
       answer: response.choices[0].message.content,
@@ -356,24 +742,80 @@ const answerWithRag = async (query, conversationHistory = [], sessionContext = n
 };
 
 export async function POST(req) {
+  const requestStartTime = Date.now();
+  console.log('=== RAG API Streaming Request Started ===');
+  
   try {
     const body = await req.json();
     const query = body.query;
     const conversationHistory = body.conversationHistory || [];
     const sessionContext = body.sessionContext || { currentCourse: null, activeCourses: [] };
+    const useStreaming = body.useStreaming !== false; // Default to true
+
+    console.log(`Query: "${query}" (Streaming: ${useStreaming})`);
 
     if (!query) {
       return Response.json({ error: 'Missing query' }, { status: 400 });
     }
 
-    const result = await answerWithRag(query, conversationHistory, sessionContext);
+    if (!useStreaming) {
+      // Fallback to regular response for clients that don't support streaming
+      const result = await answerWithRag(query, conversationHistory, sessionContext);
+      
+      const totalTime = Date.now() - requestStartTime;
+      console.log(`=== RAG API Request Completed in ${totalTime}ms ===`);
+      
+      return Response.json({
+        answer: result.answer,
+        sessionContext: result.sessionContext,
+        _metadata: {
+          responseTime: totalTime,
+          cacheStats: getCacheStats()
+        }
+      });
+    }
+
+    // Streaming response
+    const encoder = new TextEncoder();
     
-    return Response.json({
-      answer: result.answer,
-      sessionContext: result.sessionContext
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          // Send initial status
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: 'status',
+            message: 'Starting data collection...',
+            progress: 0
+          })}\n\n`));
+
+          // Get the streaming result
+          await answerWithRagStreaming(query, conversationHistory, sessionContext, controller, encoder, requestStartTime);
+          
+        } catch (error) {
+          console.error('[Streaming Error]:', error);
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: 'error',
+            error: error.message || 'Internal Server Error'
+          })}\n\n`));
+        } finally {
+          controller.close();
+        }
+      }
     });
+    
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
+    
   } catch (error) {
-    console.error('[RAG Error]', error);
+    const totalTime = Date.now() - requestStartTime;
+    console.error(`[RAG Error] after ${totalTime}ms:`, error);
     return Response.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

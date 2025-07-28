@@ -25,3 +25,24 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Streaming text cursor animation */
+.streaming-text {
+  position: relative;
+}
+
+.streaming-text::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  top: 0;
+  width: 2px;
+  height: 1.5rem;
+  background-color: #1f2937;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
