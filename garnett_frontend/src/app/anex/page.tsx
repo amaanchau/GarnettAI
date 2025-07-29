@@ -71,10 +71,101 @@ export default function AnexPage() {
     const [selectedSeasons, setSelectedSeasons] = useState<string[]>(['SPRING', 'SUMMER', 'FALL']);
     // Add loading state for data load animation
     const [dataLoading, setDataLoading] = useState(false);
+    // Add state for URL course parameter
+    const [initialCourse, setInitialCourse] = useState<string | null>(null);
 
-    // Fetch courses data on component mount
+    // Handle URL parameters immediately on mount
     useEffect(() => {
-        async function fetchData() {
+        console.log('🔍 URL parameter detection useEffect running');
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const courseParam = urlParams.get('course');
+            console.log('📋 URL params:', window.location.search);
+            console.log('🎯 Course param found:', courseParam);
+            
+            if (courseParam) {
+                console.log('✅ Course parameter detected, triggering search');
+                setInitialCourse(courseParam);
+                setSearchTerm(courseParam);
+                // Trigger search immediately without waiting for course list
+                handleUrlCourseSearch(courseParam);
+            } else {
+                console.log('❌ No course parameter found in URL');
+            }
+        } else {
+            console.log('❌ Window is undefined');
+        }
+    }, []);
+
+    // Function to handle URL course search (defined before useEffect)
+    const handleUrlCourseSearch = async (courseCode: string) => {
+        console.log('🔍 handleUrlCourseSearch called with:', courseCode);
+        
+        try {
+            // Hide search results
+            setShowResults(false);
+
+            // Set loading state for animations
+            setDataLoading(true);
+            console.log('📊 Set dataLoading to true');
+
+            // Update search term to the course code
+            setSearchTerm(courseCode);
+            console.log('📝 Set searchTerm to:', courseCode);
+
+            // Clear previous data
+            setGpaData([]);
+            setCourseData([]);
+            console.log('🗑️ Cleared previous data');
+
+            // Clean course code by removing spaces for API calls
+            const cleanCourseCode = courseCode.replace(/\s+/g, '');
+            console.log('🌐 Fetching data for course:', courseCode, '(cleaned to:', cleanCourseCode, ')');
+            const [gpaRes, courseDataRes] = await Promise.all([
+                fetch(`/api/get_gpa_by_term?course=${cleanCourseCode}`),
+                fetch(`/api/get_course_data?course=${cleanCourseCode}`)
+            ]);
+
+            console.log('📡 API responses received');
+            const gpaJson = await gpaRes.json();
+            const courseJson = await courseDataRes.json();
+
+            console.log('📊 GPA data:', gpaJson);
+            console.log('📋 Course data:', courseJson);
+
+            const gpaDataFromResponse = gpaJson.data || [];
+            const courseDataFromResponse = courseJson.data || [];
+
+            console.log('📈 GPA records count:', gpaDataFromResponse.length);
+            console.log('📊 Course records count:', courseDataFromResponse.length);
+
+            // Set the data and end loading state
+            setGpaData(gpaDataFromResponse);
+            setCourseData(courseDataFromResponse);
+
+            // Initialize selected instructors with all instructors from the data
+            const instructors = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))].map(
+                instructor => String(instructor)
+            );
+            setSelectedInstructors(instructors);
+            console.log('👥 Selected instructors:', instructors);
+
+            // End loading state
+            setDataLoading(false);
+            console.log('✅ handleUrlCourseSearch completed successfully');
+            
+        } catch (error) {
+            console.error('❌ Error in handleUrlCourseSearch:', error);
+            setDataLoading(false);
+            setError('Failed to load course data. Please try again later.');
+        }
+    };
+
+
+
+    // Fetch courses data on component mount (separate from URL handling)
+    useEffect(() => {
+        async function fetchCourses() {
             try {
                 setLoading(true);
                 setError(null);
@@ -89,15 +180,60 @@ export default function AnexPage() {
                 const coursesData = await coursesResponse.json();
                 setCourses(coursesData.courses || []);
             } catch (err) {
-                console.error('Error fetching data:', err);
-                setError('Failed to load course data. Please try again later.');
+                console.error('Error fetching courses:', err);
+                setError('Failed to load course list. Please try again later.');
             } finally {
                 setLoading(false);
             }
         }
 
-        fetchData();
+        fetchCourses();
     }, []);
+
+    // Function to trigger search for a course (uses same logic as handleUrlCourseSearch)
+    const triggerSearch = async (courseCode: string) => {
+        await handleUrlCourseSearch(courseCode);
+    };
+
+    // Function to load course data
+    const loadCourseData = async (courseCode: string) => {
+        try {
+            setDataLoading(true);
+            setError(null);
+
+            // Clear previous data
+            setGpaData([]);
+            setCourseData([]);
+
+            // Fetch data for the course
+            const [gpaRes, courseDataRes] = await Promise.all([
+                fetch(`/api/get_gpa_by_term?course=${courseCode}`),
+                fetch(`/api/get_course_data?course=${courseCode}`)
+            ]);
+
+            const gpaJson = await gpaRes.json();
+            const courseJson = await courseDataRes.json();
+
+            const gpaDataFromResponse = gpaJson.data || [];
+            const courseDataFromResponse = courseJson.data || [];
+
+            // Set the data
+            setGpaData(gpaDataFromResponse);
+            setCourseData(courseDataFromResponse);
+
+            // Initialize selected instructors with all instructors from the data
+            const instructors = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))].map(
+                instructor => String(instructor)
+            );
+            setSelectedInstructors(instructors);
+
+        } catch (err) {
+            console.error('Error loading course data:', err);
+            setError('Failed to load course data. Please try again later.');
+        } finally {
+            setDataLoading(false);
+        }
+    };
 
     // Handle clicking outside of search results to close dropdown
     useEffect(() => {
@@ -124,7 +260,7 @@ export default function AnexPage() {
         // Filter based on search term - remove spaces for comparison
         const term = searchTerm.toLowerCase().replace(/\s+/g, '');
 
-        // Search courses only
+        // Search courses only (works even if courses list is still loading)
         const matchingCourses = courses
             .filter(course =>
                 course.code.toLowerCase().replace(/\s+/g, '').includes(term)
@@ -202,98 +338,35 @@ export default function AnexPage() {
             // Remove spaces from the search term
             const cleanedSearchTerm = searchTerm.replace(/\s+/g, '');
 
-            // Find the first matching course with the cleaned search term
-            const matchingCourse = courses
-                .filter(course => course.code.toLowerCase().includes(cleanedSearchTerm.toLowerCase()))
-                .sort((a, b) => {
-                    // Sort exact matches to the top
-                    const aStartsWithTerm = a.code.toLowerCase().startsWith(cleanedSearchTerm.toLowerCase());
-                    const bStartsWithTerm = b.code.toLowerCase().startsWith(cleanedSearchTerm.toLowerCase());
+            // Try to find a matching course in the loaded courses list
+            let matchingCourse = null;
+            if (courses.length > 0) {
+                matchingCourse = courses
+                    .filter(course => course.code.toLowerCase().includes(cleanedSearchTerm.toLowerCase()))
+                    .sort((a, b) => {
+                        // Sort exact matches to the top
+                        const aStartsWithTerm = a.code.toLowerCase().startsWith(cleanedSearchTerm.toLowerCase());
+                        const bStartsWithTerm = b.code.toLowerCase().startsWith(cleanedSearchTerm.toLowerCase());
 
-                    if (aStartsWithTerm && !bStartsWithTerm) return -1;
-                    if (!aStartsWithTerm && bStartsWithTerm) return 1;
+                        if (aStartsWithTerm && !bStartsWithTerm) return -1;
+                        if (!aStartsWithTerm && bStartsWithTerm) return 1;
 
-                    // Then alphabetically
-                    return a.code.localeCompare(b.code);
-                })[0];
-
-            if (matchingCourse) {
-                // Hide search results
-                setShowResults(false);
-
-                // Set loading state for animations
-                setDataLoading(true);
-
-                // Update search term to the matched course code
-                setSearchTerm(matchingCourse.code);
-
-                // Clear previous data
-                setGpaData([]);
-                setCourseData([]);
-
-                // Fetch data for the matched course
-                const [gpaRes, courseDataRes] = await Promise.all([
-                    fetch(`/api/get_gpa_by_term?course=${matchingCourse.code}`),
-                    fetch(`/api/get_course_data?course=${matchingCourse.code}`)
-                ]);
-
-                const gpaJson = await gpaRes.json();
-                const courseJson = await courseDataRes.json();
-
-                const gpaDataFromResponse = gpaJson.data || [];
-                const courseDataFromResponse = courseJson.data || [];
-
-                // Set the data and end loading state
-                setGpaData(gpaDataFromResponse);
-                setCourseData(courseDataFromResponse);
-
-                // Initialize selected instructors with all instructors from the data
-                const instructors = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))].map(
-                    instructor => String(instructor)
-                );
-                setSelectedInstructors(instructors);
-
-                // End loading state
-                setDataLoading(false);
+                        // Then alphabetically
+                        return a.code.localeCompare(b.code);
+                    })[0];
             }
+
+            // If no matching course found in loaded list, use the search term directly
+            const courseToSearch = matchingCourse ? matchingCourse.code : cleanedSearchTerm;
+
+            // Use the triggerSearch function
+            await triggerSearch(courseToSearch);
         }
     };
 
     const handleResultClick = async (result: SearchResult) => {
-        setSearchTerm(result.displayText);
-        setShowResults(false);
-
-        // Set loading state for animations
-        setDataLoading(true);
-
-        // Clear previous data
-        setGpaData([]);
-        setCourseData([]);
-
-        // Only fetch course data
-        const [gpaRes, courseDataRes] = await Promise.all([
-            fetch(`/api/get_gpa_by_term?course=${result.displayText}`),
-            fetch(`/api/get_course_data?course=${result.displayText}`)
-        ]);
-
-        const gpaJson = await gpaRes.json();
-        const courseJson = await courseDataRes.json();
-
-        const gpaDataFromResponse = gpaJson.data || [];
-        const courseDataFromResponse = courseJson.data || [];
-
-        // Set the data and end loading state
-        setGpaData(gpaDataFromResponse);
-        setCourseData(courseDataFromResponse);
-
-        // Initialize selected instructors with all instructors from the data
-        const instructors = [...new Set(gpaDataFromResponse.map((d: GPARecord) => d.instructor))].map(
-            instructor => String(instructor)
-        );
-        setSelectedInstructors(instructors);
-
-        // End loading state
-        setDataLoading(false);
+        // Use the triggerSearch function
+        await triggerSearch(result.displayText);
     };
 
     // Handle toggling instructor visibility for both table and graph
@@ -354,10 +427,10 @@ export default function AnexPage() {
                                 onKeyDown={handleKeyDown}
                                 placeholder="Search courses..."
                                 className="w-full p-4 pl-12 rounded-xl border border-red-100 focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none transition-all shadow-sm text-lg"
-                                disabled={loading}
+                                disabled={dataLoading}
                             />
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                {loading ? (
+                                {dataLoading ? (
                                     <svg className="animate-spin h-6 w-6 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -374,6 +447,13 @@ export default function AnexPage() {
                         {error && (
                             <div className="mt-4 p-3 bg-red-50 text-red-500 rounded-lg text-sm">
                                 {error}
+                            </div>
+                        )}
+                        
+                        {/* Course list loading indicator */}
+                        {loading && !dataLoading && (
+                            <div className="mt-2 text-xs text-gray-500 text-center">
+                                Loading course list...
                             </div>
                         )}
                         {/* Search results dropdown */}

@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Inter, Nunito } from 'next/font/google';
 import Navbar from "@/components/Navbar";
+import CourseLinkCard from "@/components/CourseLinkCard";
 import { motion } from 'framer-motion';
 
 // Using Inter for a cleaner, more modern look
@@ -29,7 +30,9 @@ const formatMessage = (content: string) => {
 type Message = {
   content: string;
   isUser: boolean;
-  id?: string
+  id?: string;
+  hasCourseLink?: boolean;
+  courseCode?: string;
 };
 
 // Session context type
@@ -206,7 +209,9 @@ export default function Home() {
                   setMessages(prev => [...prev, {
                     content: data.answer,
                     isUser: false,
-                    id: Date.now().toString()
+                    id: Date.now().toString(),
+                    hasCourseLink: data.sessionContext?.activeCourses?.length > 0,
+                    courseCode: data.sessionContext?.activeCourses?.[0]
                   }]);
 
                   // Update session context
@@ -231,7 +236,8 @@ export default function Home() {
       setMessages(prev => [...prev, {
         content: "Whoop! We're having trouble connecting right now. Please try again later.",
         isUser: false,
-        id: Date.now().toString()
+        id: Date.now().toString(),
+        hasCourseLink: false
       }]);
     } finally {
       setIsLoading(false);
@@ -391,18 +397,30 @@ export default function Home() {
             ) : (
               <div className={conversationStarted ? "w-full max-w-7xl mx-auto px-4 mt-1" : ""}>
                 {messages.map((message, index) => (
-                  <div
-                    key={index}
-                    className={`mb-4 flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
-                  >
+                  <div key={index}>
                     <div
-                      className={`p-3 rounded-xl inline-block max-w-[1000px] text-lg ${message.isUser
-                        ? 'bg-gray-50 text-gray-800'
-                        : 'bg-white text-gray-800 rounded-tl-none'
-                        }`}
-                      dangerouslySetInnerHTML={formatMessage(message.content)}
-                      style={{ whiteSpace: 'pre-line' }}
-                    />
+                      className={`mb-4 flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`p-3 rounded-xl inline-block max-w-[1000px] text-lg ${message.isUser
+                          ? 'bg-gray-50 text-gray-800'
+                          : 'bg-white text-gray-800 rounded-tl-none'
+                          }`}
+                        dangerouslySetInnerHTML={formatMessage(message.content)}
+                        style={{ whiteSpace: 'pre-line' }}
+                      />
+                    </div>
+                    {/* Show course link card for AI responses when a course is detected */}
+                    {!message.isUser && message.hasCourseLink && message.courseCode && (
+                      <div className="flex justify-start mb-4">
+                        <div className="w-full max-w-[1000px]">
+                          <CourseLinkCard 
+                            courseCode={message.courseCode} 
+                            isVisible={true} 
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -430,6 +448,17 @@ export default function Home() {
                     )}
                   </div>
                 </div>
+                {/* Show course link card for streaming responses when a course is detected */}
+                {sessionContext.activeCourses && sessionContext.activeCourses.length > 0 && (
+                  <div className="flex justify-start mb-4">
+                    <div className="w-full max-w-[1000px]">
+                      <CourseLinkCard 
+                        courseCode={sessionContext.activeCourses[0]} 
+                        isVisible={true} 
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             
