@@ -61,15 +61,15 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
         });
 
         return (
-            <div className="glass p-3 rounded-lg shadow-md text-xs sm:text-sm border border-[rgba(128,0,32,0.1)]"
+            <div className="glass p-2 rounded-lg shadow-md border border-[rgba(128,0,32,0.1)]"
                 style={{ zIndex: 1000, position: 'relative', maxWidth: '90vw' }}>
-                <p className="font-medium text-gray-900 mb-1 text-xs sm:text-sm">{`Term: ${label}`}</p>
-                <div className="max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent" style={{ scrollbarWidth: 'thin' }}>
+                <p className="font-medium text-gray-900 mb-1 text-xs">{`Term: ${label}`}</p>
+                <div>
                     {sortedPayload.map((entry, index) => (
-                        <p key={`item-${index}`} className="flex items-center mb-1 text-xs sm:text-sm">
-                            <span className="w-2 h-2 sm:w-3 sm:h-3 inline-block mr-1 sm:mr-2 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }}></span>
-                            <span className="font-medium truncate max-w-[120px] sm:max-w-full">{entry.name}</span>
-                            <span className="ml-1 sm:ml-2 flex-shrink-0">
+                        <p key={`item-${index}`} className="flex items-center mb-0.5 text-xs">
+                            <span className="w-1.5 h-1.5 inline-block mr-1 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }}></span>
+                            <span className="font-medium truncate max-w-[60px]">{entry.name}</span>
+                            <span className="ml-1 flex-shrink-0">
                                 {entry.value !== null && entry.value !== undefined ? (
                                     <span className={getGpaColor(entry.value)}>
                                         {Number(entry.value).toFixed(2)}
