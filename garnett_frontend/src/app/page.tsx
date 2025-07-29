@@ -54,8 +54,20 @@ export default function Home() {
   });
   const [streamingResponse, setStreamingResponse] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Function to handle stopping the current request
+  const handleStopRequest = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+    }
+    setIsStreaming(false);
+    setIsLoading(false);
+    setStreamingResponse('');
+  };
 
   // Function to handle starting a new chat
   const handleNewChat = () => {
@@ -145,6 +157,10 @@ export default function Home() {
     setStreamingResponse('');
 
     try {
+      // Create AbortController for this request
+      const controller = new AbortController();
+      setAbortController(controller);
+
       // Get last 10 messages for context
       const conversationHistory = messages.slice(-8);
 
@@ -160,6 +176,7 @@ export default function Home() {
           sessionContext: sessionContext,
           useStreaming: true
         }),
+        signal: controller.signal
       });
 
       if (!response.ok) {
@@ -234,18 +251,26 @@ export default function Home() {
 
     } catch (error) {
       console.error("API Error:", error);
-      // Handle exception
-      setMessages(prev => [...prev, {
-        content: "Whoop! We're having trouble connecting right now. Please try again later.",
-        isUser: false,
-        id: Date.now().toString(),
-        hasCourseLink: false,
-        courseCodes: []
-      }]);
+      
+      // Check if the error is due to abort
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Request was aborted by user');
+        // Don't add error message for user-initiated aborts
+      } else {
+        // Handle other exceptions
+        setMessages(prev => [...prev, {
+          content: "Whoop! We're having trouble connecting right now. Please try again later.",
+          isUser: false,
+          id: Date.now().toString(),
+          hasCourseLink: false,
+          courseCodes: []
+        }]);
+      }
     } finally {
       setIsLoading(false);
       setIsStreaming(false);
       setStreamingResponse('');
+      setAbortController(null);
     }
   };
 
@@ -454,6 +479,14 @@ export default function Home() {
                     )}
                   </div>
                 </div>
+                
+                {/* Stop indicator */}
+                <div className="flex justify-start mb-2">
+                  <div className="text-xs text-gray-500 flex items-center">
+                    <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse mr-2"></div>
+                    Generating response... Click the stop button to cancel
+                  </div>
+                </div>
                 {/* Show course link cards for streaming responses when courses are detected */}
                 {sessionContext.activeCourses && sessionContext.activeCourses.length > 0 && (
                   <div className="flex justify-start mb-4">
@@ -513,26 +546,44 @@ export default function Home() {
                 rows={1}
                 disabled={isLoading || isStreaming}
               />
-              <motion.button
-                type="submit"
-                whileTap={{ scale: 0.95 }}
-                whileHover={{ scale: 1.05 }}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-10 h-10 flex items-center justify-center ${inputValue.trim() && !isLoading && !isStreaming ? 'bg-red-300 text-white' : 'bg-red-100 text-red-300'
-                  } transition-colors`}
-                disabled={!inputValue.trim() || isLoading || isStreaming}
-                style={{ lineHeight: 1 }} // Ensure proper centering
-              >
-                {isLoading ? (
-                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              
+              {/* Stop button - appears during streaming */}
+              {isStreaming && (
+                <motion.button
+                  type="button"
+                  onClick={handleStopRequest}
+                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.05 }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-10 h-10 flex items-center justify-center bg-red-500 text-white hover:bg-red-600 transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                  </svg>
-                )}
-              </motion.button>
+                </motion.button>
+              )}
+              {/* Submit button - hidden during streaming */}
+              {!isStreaming && (
+                <motion.button
+                  type="submit"
+                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.05 }}
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-10 h-10 flex items-center justify-center ${inputValue.trim() && !isLoading ? 'bg-red-300 text-white' : 'bg-red-100 text-red-300'
+                    } transition-colors`}
+                  disabled={!inputValue.trim() || isLoading}
+                  style={{ lineHeight: 1 }} // Ensure proper centering
+                >
+                  {isLoading ? (
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                    </svg>
+                  )}
+                </motion.button>
+              )}
             </form>
           </div>
         </motion.div>
