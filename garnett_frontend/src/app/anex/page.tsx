@@ -419,17 +419,17 @@ export default function AnexPage() {
                 <main className="flex-grow flex flex-col items-center px-4">
                     {/* Compact search section - positioned higher */}
                     <div className="w-full max-w-2xl mx-auto mt-2 relative" ref={searchContainerRef}>
-                        <div className="relative">
-                            <input
+                    <div className="relative">
+                                                    <input
                                 type="text"
                                 value={searchTerm}
                                 onChange={handleSearchChange}
                                 onKeyDown={handleKeyDown}
                                 placeholder="Search courses..."
-                                className="w-full p-4 pl-12 rounded-xl border border-red-100 focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none transition-all shadow-sm text-lg"
+                                className="w-full p-4 pr-16 rounded-xl border border-[rgba(128,0,32,0.1)] focus:border-[#800020] focus:ring-2 focus:ring-[rgba(128,0,32,0.1)] outline-none transition-all shadow-sm text-lg input-modern"
                                 disabled={dataLoading}
                             />
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
                                 {dataLoading ? (
                                     <svg className="animate-spin h-6 w-6 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -441,11 +441,11 @@ export default function AnexPage() {
                                     </svg>
                                 )}
                             </div>
-                        </div>
+                    </div>
 
                         {/* Error message */}
                         {error && (
-                            <div className="mt-4 p-3 bg-red-50 text-red-500 rounded-lg text-sm">
+                            <div className="mt-4 p-3 glass text-[#800020] rounded-lg text-sm border border-[rgba(128,0,32,0.1)]">
                                 {error}
                             </div>
                         )}
@@ -474,7 +474,7 @@ export default function AnexPage() {
                                                     onClick={() => handleResultClick(result)}
                                                     className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center transition-colors border-b border-gray-100 last:border-0"
                                                 >
-                                                    <div className="mr-3 text-red-400 flex-shrink-0">
+                                                    <div className="mr-3 text-[#800020] flex-shrink-0">
                                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                                                         </svg>
@@ -496,28 +496,28 @@ export default function AnexPage() {
                     {/* Add welcome message with animation when no data is shown */}
                     <AnimatePresence>
                         {!gpaData.length && !courseData.length && !error && !dataLoading && (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="w-full max-w-2xl mx-auto mt-8 px-6 py-8 bg-white rounded-xl shadow-sm border border-red-100 text-center"
-                            >
-                                <h2 className="text-2xl font-bold text-gray-800 mb-3">
-                                    Find Your Perfect Class
-                                </h2>
-                                <p className="text-lg text-gray-600 mb-6">
-                                    Search any Texas A&M course to view professors, their grade distributions, and Rate My Professor links.
-                                </p>
-                                <div className="flex items-center justify-center">
-                                    <div className="bg-red-50 p-3 rounded-lg inline-flex items-center text-red-700">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        <span className="text-sm font-medium">Try searching for courses like CSCE121, MATH151, or ENGR102</span>
+                                                            <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="w-full max-w-2xl mx-auto mt-8 px-6 py-8 card-modern text-center"
+                                >
+                                    <h2 className="text-2xl font-bold text-[#800020] mb-3">
+                                        Find Your Perfect Class
+                                    </h2>
+                                    <p className="text-lg text-gray-600 mb-6">
+                                        Search any Texas A&M course to view professors, their grade distributions, and Rate My Professor links.
+                                    </p>
+                                    <div className="flex items-center justify-center">
+                                        <div className="glass p-3 rounded-lg inline-flex items-center text-[#800020] border border-[rgba(128,0,32,0.1)]">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            <span className="text-sm font-medium">Try searching for courses like CSCE121, MATH151, or ENGR102</span>
+                                        </div>
                                     </div>
-                                </div>
-                            </motion.div>
+                                </motion.div>
                         )}
                     </AnimatePresence>
 
@@ -537,7 +537,7 @@ export default function AnexPage() {
                                         <h3 className="text-sm font-medium text-gray-600">Term Filter</h3>
                                         <button
                                             onClick={toggleAllSeasons}
-                                            className="text-xs text-gray-600 font-medium px-2 py-1 rounded hover:bg-gray-50 
+                                            className="text-xs text-gray-600 font-medium px-2 py-1 rounded hover:bg-[rgba(128,0,32,0.05)] 
                                         transition-colors duration-150 flex items-center"
                                         >
                                             {selectedSeasons.length === 3 ? (
@@ -564,7 +564,7 @@ export default function AnexPage() {
                                                 onClick={() => toggleSeason(season)}
                                                 className={`px-4 py-1 text-sm font-medium rounded transition-colors duration-150 flex-1 
                                                 ${selectedSeasons.includes(season)
-                                                        ? 'bg-red-50 text-red-700 ring-1 ring-red-200'
+                                                        ? 'bg-[rgba(128,0,32,0.1)] text-[#800020] ring-1 ring-[rgba(128,0,32,0.2)]'
                                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                                             >
                                                 {season}
@@ -579,7 +579,7 @@ export default function AnexPage() {
                                         <h3 className="text-sm font-medium text-gray-600">Instructor Filter</h3>
                                         <button
                                             onClick={toggleAllInstructors}
-                                            className="text-xs text-gray-600 font-medium px-2 py-1 rounded hover:bg-gray-50 
+                                            className="text-xs text-gray-600 font-medium px-2 py-1 rounded hover:bg-[rgba(128,0,32,0.05)] 
                                         transition-colors duration-150 flex items-center"
                                         >
                                             {selectedInstructors.length === [...new Set(courseData.map((row: OurCourseData) => String(row.instructor)))].length ? (
@@ -606,7 +606,7 @@ export default function AnexPage() {
                                                 onClick={() => toggleInstructor(instructor)}
                                                 className={`px-2 py-1 text-xs font-medium rounded transition-colors duration-150
                                                 ${selectedInstructors.includes(instructor)
-                                                        ? 'bg-red-50 text-red-700 ring-1 ring-red-200'
+                                                        ? 'bg-[rgba(128,0,32,0.1)] text-[#800020] ring-1 ring-[rgba(128,0,32,0.2)]'
                                                         : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
                                             >
                                                 {instructor}
@@ -657,7 +657,7 @@ export default function AnexPage() {
                     </AnimatePresence>
                 </main>
 
-                <footer className="py-4 text-center text-gray-500 text-sm border-t border-red-100 mt-auto">
+                <footer className="py-4 text-center text-gray-500 text-sm border-t border-[rgba(128,0,32,0.1)] mt-auto">
                     <p>© 2025 Aggie AI - Help Texas A&M Students Find the Right Classes</p>
                 </footer>
             </div>

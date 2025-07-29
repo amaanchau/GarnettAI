@@ -149,7 +149,7 @@ export default function CourseDataTable({ data }: Props) {
     };
 
     if (!data || data.length === 0) {
-        return <div className="mt-10 p-4 mb-10 bg-red-50 text-red-500 rounded-lg">No course data available</div>;
+        return <div className="mt-10 p-4 mb-10 glass text-[#800020] rounded-lg border border-[rgba(128,0,32,0.1)]">No course data available</div>;
     }
 
     // Create a simplified mobile view
@@ -159,7 +159,7 @@ export default function CourseDataTable({ data }: Props) {
                 <div
                     key={idx}
                     className={`mb-3 rounded-lg border ${expandedRow === idx
-                            ? 'border-red-200 shadow-md bg-red-50'
+                            ? 'border-[rgba(128,0,32,0.2)] shadow-md glass'
                             : 'border-gray-100 bg-white'
                         } overflow-hidden transition-all duration-200`}
                 >
@@ -181,7 +181,7 @@ export default function CourseDataTable({ data }: Props) {
                                     href={row.rmp_link}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="bg-red-100 text-red-700 p-1 rounded-full flex items-center justify-center"
+                                    className="bg-[rgba(128,0,32,0.1)] text-[#800020] p-1 rounded-full flex items-center justify-center"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -260,11 +260,11 @@ export default function CourseDataTable({ data }: Props) {
     const renderDesktopTable = () => (
         <table className="min-w-full text-sm">
             <thead>
-                <tr className="bg-red-100 text-gray-700 border-b border-red-200">
+                <tr className="bg-[rgba(128,0,32,0.1)] text-gray-700 border-b border-[rgba(128,0,32,0.2)]">
                     {orderedHeaders.map((header) => (
                         <th
                             key={header}
-                            className="px-4 py-3 text-center font-bold cursor-pointer transition-all duration-300 ease-in-out hover:bg-red-50 hover:text-gray-700"
+                            className="px-4 py-3 text-center font-bold cursor-pointer transition-all duration-300 ease-in-out hover:bg-[rgba(128,0,32,0.05)] hover:text-gray-700"
                             onClick={() => handleSort(header)}
                         >
                             <div className="flex items-center justify-center space-x-1">
@@ -281,7 +281,7 @@ export default function CourseDataTable({ data }: Props) {
 
 
                                 {header === sortField && (
-                                    <span className="text-red-600 ml-1">
+                                    <span className="text-[#800020] ml-1">
                                         {sortDirection === "asc" ? "↑" : "↓"}
                                     </span>
                                 )}
@@ -295,7 +295,7 @@ export default function CourseDataTable({ data }: Props) {
                     <tr
                         key={idx}
                         className={`border-b border-gray-100 transition-colors ${hoveredRow === idx
-                            ? 'bg-red-50 transform scale-[1.01] shadow-sm'
+                            ? 'bg-[rgba(128,0,32,0.05)] transform scale-[1.01] shadow-sm'
                             : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                             }`}
                         style={{ transition: 'all 0.2s ease' }}
@@ -312,14 +312,14 @@ export default function CourseDataTable({ data }: Props) {
                                         href={String(row[key])}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-red-600 hover:text-red-700 transition-colors inline-flex items-center justify-center group"
+                                        className="text-[#800020] hover:text-[#600018] transition-colors inline-flex items-center justify-center group"
                                     >
-                                        <span className="bg-red-50 px-3 py-1 rounded-l-md group-hover:bg-red-100 transition-colors">
+                                        <span className="bg-[rgba(128,0,32,0.1)] px-3 py-1 rounded-l-md group-hover:bg-[rgba(128,0,32,0.15)] transition-colors">
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                             </svg>
                                         </span>
-                                        <span className="border border-red-100 border-l-0 px-3 py-1 rounded-r-md group-hover:border-red-200 transition-colors">
+                                        <span className="border border-[rgba(128,0,32,0.2)] border-l-0 px-3 py-1 rounded-r-md group-hover:border-[rgba(128,0,32,0.3)] transition-colors">
                                             RMP
                                         </span>
                                     </a>
@@ -358,7 +358,7 @@ export default function CourseDataTable({ data }: Props) {
         <div className={`w-full mt-1 ${inter.className}`}>
             {/* Sort controls for mobile */}
             {isMobile && (
-                <div className="mb-4 bg-white p-3 rounded-lg shadow-sm border border-red-100">
+                <div className="mb-4 card-modern p-3">
                     <div className="text-sm font-medium text-gray-600 mb-2">Sort by:</div>
                     <div className="flex flex-wrap gap-2">
                         {["term", "instructor", "average_gpa"].map((field) => (
@@ -367,7 +367,7 @@ export default function CourseDataTable({ data }: Props) {
                                 onClick={() => handleSort(field)}
                                 className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors
                                     ${sortField === field
-                                        ? 'bg-red-100 text-red-700'
+                                        ? 'bg-[rgba(128,0,32,0.1)] text-[#800020]'
                                         : 'bg-gray-100 text-gray-700'
                                     }`}
                             >
@@ -384,10 +384,10 @@ export default function CourseDataTable({ data }: Props) {
             )}
 
             {/* Table */}
-            <div className="overflow-x-auto p-4 sm:p-6 bg-white rounded-xl shadow-sm border border-red-100 transition-shadow hover:shadow-md">
+            <div className="overflow-x-auto p-4 sm:p-6 card-modern transition-shadow hover:shadow-md">
                 {filteredData.length === 0 ? (
                     <div className="p-8 text-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 text-red-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 text-[#800020]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                         <h3 className="text-base sm:text-lg font-medium text-gray-700 mb-2">No data to display</h3>
@@ -403,7 +403,7 @@ export default function CourseDataTable({ data }: Props) {
             {/* Stats Summary - Responsive Grid */}
             <div className="mt-6 sm:mt-8">
                 <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                    <div className={`bg-white p-4 sm:p-5 rounded-xl border border-red-100 shadow-sm text-center transition-all duration-300 ${animateStats ? 'transform scale-105' : ''}`}>
+                    <div className={`card-modern p-4 sm:p-5 text-center transition-all duration-300 ${animateStats ? 'transform scale-105' : ''}`}>
                         <p className="text-2xl sm:text-4xl font-bold text-gray-800">
                             {filteredData.length > 0
                                 ? (filteredData.reduce((sum, row) =>
@@ -413,20 +413,20 @@ export default function CourseDataTable({ data }: Props) {
                         </p>
                         <p className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-2 uppercase tracking-wider">Average GPA</p>
                         <div className="mt-2 sm:mt-3 pt-2 sm:pt-3">
-                            <div className="h-1 w-12 sm:w-16 bg-red-100 rounded-full mx-auto"></div>
+                            <div className="h-1 w-12 sm:w-16 maroon-gradient rounded-full mx-auto"></div>
                         </div>
                     </div>
-                    <div className={`bg-white p-4 sm:p-5 rounded-xl border border-red-100 shadow-sm text-center transition-all duration-300 ${animateStats ? 'transform scale-105' : ''}`}>
+                    <div className={`card-modern p-4 sm:p-5 text-center transition-all duration-300 ${animateStats ? 'transform scale-105' : ''}`}>
                         <p className="text-2xl sm:text-4xl font-bold text-gray-800">
                             {filteredData.reduce((sum, row) =>
                                 sum + (typeof row.total === 'number' ? row.total : 0), 0)}
                         </p>
                         <p className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-2 uppercase tracking-wider">Total Students</p>
                         <div className="mt-2 sm:mt-3 pt-2 sm:pt-3">
-                            <div className="h-1 w-12 sm:w-16 bg-red-100 rounded-full mx-auto"></div>
+                            <div className="h-1 w-12 sm:w-16 maroon-gradient rounded-full mx-auto"></div>
                         </div>
                     </div>
-                    <div className={`bg-white p-4 sm:p-5 rounded-xl border border-red-100 shadow-sm text-center transition-all duration-300 ${animateStats ? 'transform scale-105' : ''}`}>
+                    <div className={`card-modern p-4 sm:p-5 text-center transition-all duration-300 ${animateStats ? 'transform scale-105' : ''}`}>
                         <p className="text-2xl sm:text-4xl font-bold text-gray-800">
                             {filteredData.length > 0
                                 ? (filteredData.reduce((sum, row) =>
@@ -437,7 +437,7 @@ export default function CourseDataTable({ data }: Props) {
                         </p>
                         <p className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-2 uppercase tracking-wider">A Rate</p>
                         <div className="mt-2 sm:mt-3 pt-2 sm:pt-3">
-                            <div className="h-1 w-12 sm:w-16 bg-red-100 rounded-full mx-auto"></div>
+                            <div className="h-1 w-12 sm:w-16 maroon-gradient rounded-full mx-auto"></div>
                         </div>
                     </div>
                 </div>

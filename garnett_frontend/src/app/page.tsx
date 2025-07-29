@@ -310,12 +310,12 @@ export default function Home() {
     <div className={`flex flex-col min-h-screen bg-white ${inter.className} font-medium`}>
       <Navbar onNewChat={handleNewChat} conversationStarted={conversationStarted} />
 
-      <main className={`flex-grow flex flex-col items-center ${conversationStarted ? 'w-full p-0' : 'px-4 py-6'}`}>
+      <main className={`flex-grow flex flex-col items-center ${conversationStarted ? 'w-full p-0 mt-10' : 'px-4 py-6'}`}>
         {/* Current Course Indicator - Show when context is active */}
         {conversationStarted && sessionContext.activeCourses && sessionContext.activeCourses.length > 0 && (
           <div className="w-full max-w-7xl mx-auto px-4 absolute top-22 z-10">
-            <div className="bg-red-50 px-3 py-1 rounded-lg text-red-700 text-sm inline-flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="glass px-4 py-2 rounded-xl text-[#800020] text-sm inline-flex items-center border border-[rgba(128,0,32,0.1)]">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
               {sessionContext.activeCourses.length === 1 ? (
@@ -348,10 +348,10 @@ export default function Home() {
               transition={{ duration: 0.5 }}
             >
               <motion.h1
-                className={`text-5xl font-bold text-gray-800 mb-4 tracking-tight inline-block ${nunito.className}`}
+                className={`text-5xl font-bold text-[#800020] mb-4 tracking-tight inline-block ${nunito.className}`}
                 whileHover={{
                   scale: 1.05,
-                  color: '#7A0000', // A darker maroon on hover
+                  color: '#600018', // A darker maroon on hover
                   transition: { duration: 0.3 }
                 }}
               >
@@ -376,15 +376,15 @@ export default function Home() {
                   transition={{ delay: index * 0.1 + 0.3 }}
                   whileHover={{
                     scale: 1.03,
-                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+                    boxShadow: "0 16px 40px rgba(128, 0, 32, 0.15)"
                   }}
-                  className="bg-white p-5 rounded-xl border border-red-100 shadow-sm cursor-pointer text-gray-700 flex flex-col hover:border-red-200"
+                  className="card-modern p-6 cursor-pointer text-gray-700 flex flex-col glass-hover"
                   onClick={() => handleSamplePromptClick(prompt.text)}
                 >
                   <span className="text-3xl mb-3">{prompt.icon}</span>
                   <span className="text-base">{prompt.text}</span>
                   <div className="mt-auto pt-3">
-                    <div className="h-1 w-16 bg-red-100 rounded-full"></div>
+                    <div className="h-1 w-16 maroon-gradient rounded-full"></div>
                   </div>
                 </motion.div>
               ))}
@@ -394,9 +394,9 @@ export default function Home() {
 
         {/* Adjust chat container size based on whether conversation has started */}
         <motion.div
-          className={`w-full bg-white flex flex-col ${conversationStarted
+          className={`w-full flex flex-col ${conversationStarted
             ? 'flex-grow border-none'
-            : 'max-w-3xl rounded-2xl shadow-lg overflow-hidden border border-red-100'
+            : 'max-w-3xl rounded-2xl overflow-hidden card-modern'
             }`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -415,7 +415,7 @@ export default function Home() {
             {messages.length === 0 ? (
               <div className="flex justify-center items-center h-full">
                 <div className="text-center text-gray-500">
-                  <svg className="w-12 h-12 mx-auto mb-4 text-red-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <svg className="w-12 h-12 mx-auto mb-4 text-[#800020]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                   </svg>
                   <p className="font-medium text-lg">Ask a question to get started!</p>
@@ -519,8 +519,8 @@ export default function Home() {
             )}
           </div>
 
-          {/* Input box with pastel maroon accent and centered button */}
-          <div className={`border-t ${conversationStarted ? 'border-gray-200' : 'border-red-100'} p-4 mt-auto bg-white`}>
+          {/* Input box with glass effect and maroon accent */}
+          <div className={`border-t ${conversationStarted ? 'border-gray-200' : 'border-[rgba(128,0,32,0.1)]'} p-4 mt-auto glass`}>
             <form onSubmit={handleSubmit} className={`relative ${conversationStarted ? 'max-w-7xl mx-auto w-full' : ''}`}>
               <textarea
                 ref={textareaRef}
@@ -541,7 +541,7 @@ export default function Home() {
                       : `Ask about ${sessionContext.activeCourses[0]} and ${sessionContext.activeCourses.length - 1} other course${sessionContext.activeCourses.length > 2 ? 's' : ''}...`
                     : "Howdy, what class can I help you with?"
                 }
-                className={`w-full py-4 px-5 pr-16 rounded-xl border text-lg ${isTyping ? 'border-red-500 ring-2 ring-red-100' : 'border-red-100'} outline-none resize-none overflow-hidden transition-all ${isStreaming ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                className={`w-full py-4 px-5 pr-16 rounded-xl border text-lg ${isTyping ? 'border-[#800020] ring-2 ring-[rgba(128,0,32,0.1)]' : 'border-[rgba(128,0,32,0.1)]'} outline-none resize-none overflow-hidden transition-all ${isStreaming ? 'bg-gray-50 cursor-not-allowed' : 'input-modern'}`}
                 style={{ minHeight: '60px', maxHeight: '200px' }}
                 rows={1}
                 disabled={isLoading || isStreaming}
@@ -554,7 +554,7 @@ export default function Home() {
                   onClick={handleStopRequest}
                   whileTap={{ scale: 0.95 }}
                   whileHover={{ scale: 1.05 }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-10 h-10 flex items-center justify-center bg-red-500 text-white hover:bg-red-600 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-10 h-10 flex items-center justify-center maroon-gradient text-white hover:shadow-lg transition-all"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -567,8 +567,8 @@ export default function Home() {
                   type="submit"
                   whileTap={{ scale: 0.95 }}
                   whileHover={{ scale: 1.05 }}
-                  className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-10 h-10 flex items-center justify-center ${inputValue.trim() && !isLoading ? 'bg-red-300 text-white' : 'bg-red-100 text-red-300'
-                    } transition-colors`}
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-10 h-10 flex items-center justify-center ${inputValue.trim() && !isLoading ? 'maroon-gradient text-white' : 'bg-[rgba(128,0,32,0.1)] text-[#800020]'
+                    } transition-all`}
                   disabled={!inputValue.trim() || isLoading}
                   style={{ lineHeight: 1 }} // Ensure proper centering
                 >
@@ -590,7 +590,7 @@ export default function Home() {
       </main>
 
       {!conversationStarted && (
-        <footer className="py-2 text-center text-gray-500 text-sm border-t border-red-100">
+        <footer className="py-2 text-center text-gray-500 text-sm border-t border-[rgba(128,0,32,0.1)]">
           <p>© 2025 Aggie AI - Help Texas A&M Students Find the Right Classes</p>
         </footer>
       )}

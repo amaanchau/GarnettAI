@@ -3,6 +3,14 @@
 :root {
   --background: rgb(255, 255, 255);
   --foreground: #171717;
+  --maroon-primary: #800020;
+  --maroon-light: #a00030;
+  --maroon-lighter: #c00040;
+  --maroon-dark: #600018;
+  --maroon-accent: #d4a5a5;
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(128, 0, 32, 0.1);
+  --glass-shadow: 0 8px 32px rgba(128, 0, 32, 0.1);
 }
 
 body {
@@ -45,4 +53,85 @@ body {
 @keyframes blink {
   0%, 50% { opacity: 1; }
   51%, 100% { opacity: 0; }
+}
+
+/* Glass morphism effects */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-hover {
+  transition: all 0.3s ease;
+}
+
+.glass-hover:hover {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 40px rgba(128, 0, 32, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Maroon gradient backgrounds */
+.maroon-gradient {
+  background: linear-gradient(135deg, var(--maroon-primary) 0%, var(--maroon-light) 100%);
+}
+
+.maroon-gradient-light {
+  background: linear-gradient(135deg, var(--maroon-lighter) 0%, var(--maroon-accent) 100%);
+}
+
+/* Modern button styles */
+.btn-modern {
+  background: linear-gradient(135deg, var(--maroon-primary) 0%, var(--maroon-light) 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(128, 0, 32, 0.2);
+}
+
+.btn-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(128, 0, 32, 0.3);
+}
+
+.btn-modern:active {
+  transform: translateY(0);
+}
+
+/* Modern input styles */
+.input-modern {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  transition: all 0.3s ease;
+  box-shadow: var(--glass-shadow);
+}
+
+.input-modern:focus {
+  border-color: var(--maroon-primary);
+  box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.1);
+  outline: none;
+}
+
+/* Card styles */
+.card-modern {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--glass-shadow);
+  transition: all 0.3s ease;
+}
+
+.card-modern:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(128, 0, 32, 0.15);
 }

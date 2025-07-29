@@ -61,7 +61,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
         });
 
         return (
-            <div className="bg-white p-3 border border-red-100 rounded-lg shadow-md text-xs sm:text-sm"
+            <div className="glass p-3 rounded-lg shadow-md text-xs sm:text-sm border border-[rgba(128,0,32,0.1)]"
                 style={{ zIndex: 1000, position: 'relative', maxWidth: '90vw' }}>
                 <p className="font-medium text-gray-900 mb-1 text-xs sm:text-sm">{`Term: ${label}`}</p>
                 <div className="max-h-40 overflow-y-auto">
@@ -142,10 +142,10 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
     });
 
     const colors = [
+        "#800020", "#A00030", "#C00040", "#D4A5A5", "#600018",
         "#FF6B6B", "#4ECDC4", "#7971EA", "#FFA726", "#66BB6A",
         "#5C6BC0", "#EC407A", "#26A69A", "#AB47BC", "#EF5350",
-        "#E75480", "#45B1E8", "#9370DB", "#E6A817", "#3CB371",
-        "#4682B4", "#D2691E", "#6A5ACD", "#2E8B57", "#CD5C5C"
+        "#E75480", "#45B1E8", "#9370DB", "#E6A817", "#3CB371"
     ];
 
     // Filter only the selected instructors
@@ -168,10 +168,10 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
     // No data or no selected instructors case - check after all hooks are called
     if (data.length === 0 || selectedInstructors.length === 0) {
         return (
-            <div className={`w-full mt-8 p-4 sm:p-6 bg-white rounded-xl shadow-sm border border-red-100 transition-shadow hover:shadow-md ${inter.className}`}>
+            <div className={`w-full mt-8 p-4 sm:p-6 card-modern transition-shadow hover:shadow-md ${inter.className}`}>
                 <div className="h-60 sm:h-96 flex items-center justify-center text-gray-500">
                     <div className="text-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 text-red-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 text-[#800020]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
                         <p className="text-base sm:text-lg font-medium">No data to display</p>
@@ -183,11 +183,11 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
     }
 
     return (
-        <div className={`w-full mt-8 p-4 sm:p-6 bg-white rounded-xl shadow-sm border border-red-100 transition-shadow hover:shadow-md ${inter.className}`}>
+        <div className={`w-full mt-8 p-4 sm:p-6 card-modern transition-shadow hover:shadow-md ${inter.className}`}>
             {/* Mobile optimization hint for many instructors */}
             {isMobile && selectedInstructors.length > 5 && (
-                <div className="mb-3 p-2 bg-red-50 rounded-lg text-center">
-                    <span className="text-xs text-red-600">
+                <div className="mb-3 p-2 glass rounded-lg text-center border border-[rgba(128,0,32,0.1)]">
+                    <span className="text-xs text-[#800020]">
                         Tip: Rotate your device horizontally for a better view of multiple instructors
                     </span>
                 </div>
