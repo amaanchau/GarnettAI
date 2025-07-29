@@ -33,6 +33,7 @@ type Message = {
   id?: string;
   hasCourseLink?: boolean;
   courseCode?: string;
+  courseCodes?: string[]; // For multiple courses
 };
 
 // Session context type
@@ -211,7 +212,8 @@ export default function Home() {
                     isUser: false,
                     id: Date.now().toString(),
                     hasCourseLink: data.sessionContext?.activeCourses?.length > 0,
-                    courseCode: data.sessionContext?.activeCourses?.[0]
+                    courseCode: data.sessionContext?.activeCourses?.[0],
+                    courseCodes: data.sessionContext?.activeCourses || []
                   }]);
 
                   // Update session context
@@ -237,7 +239,8 @@ export default function Home() {
         content: "Whoop! We're having trouble connecting right now. Please try again later.",
         isUser: false,
         id: Date.now().toString(),
-        hasCourseLink: false
+        hasCourseLink: false,
+        courseCodes: []
       }]);
     } finally {
       setIsLoading(false);
@@ -410,14 +413,17 @@ export default function Home() {
                         style={{ whiteSpace: 'pre-line' }}
                       />
                     </div>
-                    {/* Show course link card for AI responses when a course is detected */}
-                    {!message.isUser && message.hasCourseLink && message.courseCode && (
+                    {/* Show course link cards for AI responses when courses are detected */}
+                    {!message.isUser && message.hasCourseLink && message.courseCodes && message.courseCodes.length > 0 && (
                       <div className="flex justify-start mb-4">
-                        <div className="w-full max-w-[1000px]">
-                          <CourseLinkCard 
-                            courseCode={message.courseCode} 
-                            isVisible={true} 
-                          />
+                        <div className="w-full max-w-[1000px] space-y-3">
+                          {message.courseCodes.map((courseCode, courseIndex) => (
+                            <CourseLinkCard 
+                              key={`${message.id}-course-${courseIndex}`}
+                              courseCode={courseCode} 
+                              isVisible={true} 
+                            />
+                          ))}
                         </div>
                       </div>
                     )}
@@ -448,14 +454,17 @@ export default function Home() {
                     )}
                   </div>
                 </div>
-                {/* Show course link card for streaming responses when a course is detected */}
+                {/* Show course link cards for streaming responses when courses are detected */}
                 {sessionContext.activeCourses && sessionContext.activeCourses.length > 0 && (
                   <div className="flex justify-start mb-4">
-                    <div className="w-full max-w-[1000px]">
-                      <CourseLinkCard 
-                        courseCode={sessionContext.activeCourses[0]} 
-                        isVisible={true} 
-                      />
+                    <div className="w-full max-w-[1000px] space-y-3">
+                      {sessionContext.activeCourses.map((courseCode, courseIndex) => (
+                        <CourseLinkCard 
+                          key={`streaming-course-${courseIndex}`}
+                          courseCode={courseCode} 
+                          isVisible={true} 
+                        />
+                      ))}
                     </div>
                   </div>
                 )}

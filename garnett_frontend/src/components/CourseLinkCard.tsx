@@ -14,7 +14,7 @@ export default function CourseLinkCard({ courseCode, isVisible }: CourseLinkCard
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: 0.2 }}
-      className="mt-3 mb-4"
+      className="mt-2 mb-2"
     >
       <Link 
         href={`/anex?course=${encodeURIComponent(courseCode)}`}
