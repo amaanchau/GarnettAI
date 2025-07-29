@@ -64,12 +64,12 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
             <div className="glass p-3 rounded-lg shadow-md text-xs sm:text-sm border border-[rgba(128,0,32,0.1)]"
                 style={{ zIndex: 1000, position: 'relative', maxWidth: '90vw' }}>
                 <p className="font-medium text-gray-900 mb-1 text-xs sm:text-sm">{`Term: ${label}`}</p>
-                <div className="max-h-40 overflow-y-auto">
+                <div className="max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent" style={{ scrollbarWidth: 'thin' }}>
                     {sortedPayload.map((entry, index) => (
                         <p key={`item-${index}`} className="flex items-center mb-1 text-xs sm:text-sm">
-                            <span className="w-2 h-2 sm:w-3 sm:h-3 inline-block mr-1 sm:mr-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
+                            <span className="w-2 h-2 sm:w-3 sm:h-3 inline-block mr-1 sm:mr-2 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }}></span>
                             <span className="font-medium truncate max-w-[120px] sm:max-w-full">{entry.name}</span>
-                            <span className="ml-1 sm:ml-2">
+                            <span className="ml-1 sm:ml-2 flex-shrink-0">
                                 {entry.value !== null && entry.value !== undefined ? (
                                     <span className={getGpaColor(entry.value)}>
                                         {Number(entry.value).toFixed(2)}
@@ -88,6 +88,8 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
 export default function GpaLineGraph({ data, selectedInstructors }: Props) {
     const [activeInstructor, setActiveInstructor] = useState<string | null>(null);
     const [isMobile, setIsMobile] = useState(false);
+    const [focusMode, setFocusMode] = useState(false);
+    const [focusedInstructor, setFocusedInstructor] = useState<string | null>(null);
 
     // Check if the viewport is mobile size
     useEffect(() => {
@@ -109,6 +111,7 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
     useEffect(() => {
         // This will trigger a re-render when selectedInstructors changes
         setActiveInstructor(null);
+        setFocusedInstructor(null);
     }, [selectedInstructors]);
 
     // Debug log for troubleshooting - must be called in the same order on every render
@@ -165,6 +168,21 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
         return 400; // Max height for many instructors
     };
 
+    // Handle focus mode toggle
+    const toggleFocusMode = () => {
+        setFocusMode(!focusMode);
+        if (focusMode) {
+            setFocusedInstructor(null);
+        }
+    };
+
+    // Handle instructor focus
+    const handleInstructorFocus = (instructor: string) => {
+        if (focusMode) {
+            setFocusedInstructor(focusedInstructor === instructor ? null : instructor);
+        }
+    };
+
     // No data or no selected instructors case - check after all hooks are called
     if (data.length === 0 || selectedInstructors.length === 0) {
         return (
@@ -184,6 +202,38 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
 
     return (
         <div className={`w-full mt-8 p-4 sm:p-6 card-modern transition-shadow hover:shadow-md ${inter.className}`}>
+            {/* Chart Controls */}
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-gray-800">GPA Trends</h3>
+                    {selectedInstructors.length > 3 && (
+                        <span className="text-xs bg-[rgba(128,0,32,0.1)] text-[#800020] px-2 py-1 rounded-full">
+                            {selectedInstructors.length} instructors
+                        </span>
+                    )}
+                </div>
+                
+                {selectedInstructors.length > 3 && (
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={toggleFocusMode}
+                            className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
+                                focusMode 
+                                    ? 'bg-[#800020] text-white' 
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                        >
+                            {focusMode ? 'Exit Focus' : 'Focus Mode'}
+                        </button>
+                        {focusMode && (
+                            <span className="text-xs text-gray-500">
+                                Click an instructor to focus
+                            </span>
+                        )}
+                    </div>
+                )}
+            </div>
+
             {/* Mobile optimization hint for many instructors */}
             {isMobile && selectedInstructors.length > 5 && (
                 <div className="mb-3 p-2 glass rounded-lg text-center border border-[rgba(128,0,32,0.1)]">
@@ -223,7 +273,7 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                         />
                         <Tooltip content={<CustomTooltip />} />
 
-                        {/* Mobile-optimized Legend with horizontal scrolling */}
+                        {/* Enhanced Legend with better interaction */}
                         <Legend
                             verticalAlign="top"
                             height={isMobile ? 36 : (selectedInstructors.length > 8 ? 72 : selectedInstructors.length > 4 ? 54 : 36)}
@@ -247,7 +297,15 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                             }}
                             onMouseEnter={(e) => setActiveInstructor((e as unknown as { dataKey: string }).dataKey)}
                             onMouseLeave={() => setActiveInstructor(null)}
-                            onClick={(e) => isMobile && setActiveInstructor((e as unknown as { dataKey: string }).dataKey)}
+                            onClick={(e) => {
+                                const dataKey = (e as unknown as { dataKey: string }).dataKey;
+                                if (isMobile) {
+                                    setActiveInstructor(dataKey);
+                                }
+                                if (focusMode) {
+                                    handleInstructorFocus(dataKey);
+                                }
+                            }}
                         />
 
                         {/* Lines for all selected instructors */}
@@ -257,6 +315,30 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                                 return null;
                             }
 
+                            // Determine line opacity and stroke width based on focus mode and active states
+                            let opacity = 1;
+                            let strokeWidth = isMobile ? 1.5 : 2;
+
+                            if (focusMode && focusedInstructor) {
+                                // In focus mode, only show focused instructor clearly
+                                if (focusedInstructor === instructor) {
+                                    opacity = 1;
+                                    strokeWidth = 4;
+                                } else {
+                                    opacity = 0.2;
+                                    strokeWidth = 1;
+                                }
+                            } else if (activeInstructor) {
+                                // Normal hover mode
+                                if (activeInstructor === instructor) {
+                                    opacity = 1;
+                                    strokeWidth = 3;
+                                } else {
+                                    opacity = 0.3;
+                                    strokeWidth = 1;
+                                }
+                            }
+
                             return (
                                 <Line
                                     key={instructor}
@@ -264,13 +346,14 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                                     dataKey={instructor}
                                     name={instructor}
                                     stroke={colors[index % colors.length]}
-                                    strokeWidth={activeInstructor === instructor ? 3 : (isMobile ? 1.5 : 2)}
-                                    opacity={activeInstructor ? (activeInstructor === instructor ? 1 : 0.3) : 1}
+                                    strokeWidth={strokeWidth}
+                                    opacity={opacity}
                                     dot={{
                                         r: isMobile ? 3 : 4,
                                         strokeWidth: 1,
                                         fill: colors[index % colors.length],
-                                        stroke: colors[index % colors.length]
+                                        stroke: colors[index % colors.length],
+                                        opacity: opacity
                                     }}
                                     activeDot={{
                                         r: isMobile ? 5 : 6,
