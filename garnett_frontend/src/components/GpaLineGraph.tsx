@@ -490,22 +490,27 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
 
             {/* Heatmap */}
             {vizTab === "heatmap" && (
-            <div className="w-full overflow-x-auto">
+            <div className="w-full overflow-x-auto rounded-2xl border border-[rgba(128,0,32,0.1)] shadow-[0_8px_32px_rgba(128,0,32,0.08)] scrollbar-thin">
                 <div
-                    className="inline-block min-w-full"
+                    className="inline-block min-w-full rounded-2xl overflow-hidden"
                     style={{
                         display: "grid",
                         gridTemplateColumns: `auto repeat(${terms.length}, minmax(${isMobile ? 48 : 64}px, 1fr))`,
-                        gridTemplateRows: `auto repeat(${filteredInstructors.length}, 36px)`,
-                        gap: 1,
-                        backgroundColor: "rgb(229, 231, 235)",
+                        gridTemplateRows: `auto repeat(${filteredInstructors.length}, 40px)`,
+                        gap: 2,
+                        backgroundColor: "rgba(128, 0, 32, 0.06)",
                     }}
                 >
-                    <div className="bg-gray-100 font-medium text-xs text-gray-600 flex items-center justify-center px-1 py-2 sticky left-0 z-10" style={{ gridColumn: 1, gridRow: 1 }} />
+                    {/* Corner cell */}
+                    <div
+                        className="glass font-semibold text-xs text-[#800020] flex items-center justify-center px-2 py-3 sticky left-0 z-20 rounded-tl-2xl border-r border-b border-[rgba(128,0,32,0.12)]"
+                        style={{ gridColumn: 1, gridRow: 1 }}
+                    />
+                    {/* Term headers */}
                     {terms.map((term, c) => (
                         <div
                             key={term}
-                            className="bg-gray-100 font-medium text-xs text-gray-600 flex items-center justify-center py-2 truncate px-0.5"
+                            className="glass font-semibold text-xs text-[#800020] flex items-center justify-center py-3 truncate px-1 border-b border-[rgba(128,0,32,0.12)]"
                             style={{ gridColumn: c + 2, gridRow: 1 }}
                             title={term}
                         >
@@ -516,7 +521,7 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                         return (
                             <React.Fragment key={instructor}>
                                 <div
-                                    className="bg-gray-100 font-medium text-xs text-gray-700 flex items-center truncate pl-2 pr-1 py-1 sticky left-0 z-10 border-r border-gray-200"
+                                    className="glass font-medium text-xs text-gray-700 flex items-center truncate pl-3 pr-2 py-2 sticky left-0 z-10 border-r border-[rgba(128,0,32,0.12)] bg-white/90"
                                     style={{ gridColumn: 1, gridRow: r + 2 }}
                                     title={instructor}
                                 >
@@ -532,7 +537,7 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                                     return (
                                         <div
                                             key={`${instructor}-${term}`}
-                                            className="flex items-center justify-center text-xs font-medium transition-opacity hover:opacity-90"
+                                            className="flex items-center justify-center text-xs font-semibold rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-[0_4px_12px_rgba(128,0,32,0.2)] hover:ring-2 hover:ring-[#800020]/30 hover:ring-offset-1 hover:z-[5] cursor-default"
                                             style={{
                                                 gridColumn: c + 2,
                                                 gridRow: r + 2,
@@ -549,7 +554,16 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                         );
                     })}
                 </div>
-                <p className="text-xs text-gray-500 mt-2 text-center">Color scale: lower GPA (red) → higher GPA (green). Value shown in each cell.</p>
+                <p className="text-xs text-gray-600 mt-3 text-center px-2">
+                    <span className="inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-[rgba(128,0,32,0.06)] border border-[rgba(128,0,32,0.1)]">
+                        <span className="w-2 h-2 rounded-full bg-[#ef5350]" aria-hidden />
+                        <span>Lower GPA</span>
+                        <span className="text-[#800020] font-medium">→</span>
+                        <span className="w-2 h-2 rounded-full bg-[#66BB6A]" aria-hidden />
+                        <span>Higher GPA</span>
+                    </span>
+                    <span className="block mt-1.5 text-gray-500">Hover a cell to see details.</span>
+                </p>
             </div>
             )}
         </div>
