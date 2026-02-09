@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import {
-    LineChart, Line, XAxis, YAxis, CartesianGrid,
+    LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, Legend, ResponsiveContainer
 } from "recharts";
 import { Inter } from "next/font/google";
@@ -35,6 +35,8 @@ interface TooltipProps {
     label?: string;
 }
 
+type VizTab = "line" | "bar" | "heatmap";
+
 interface Props {
     data: GPARecord[];
     selectedInstructors: string[];
@@ -47,6 +49,16 @@ const getGpaColor = (gpa: number): string => {
     if (gpa >= 2.7) return "text-yellow-600";
     if (gpa >= 2.3) return "text-orange-500";
     return "text-red-500";
+};
+
+// Heatmap: map GPA to background color (low = red, high = green)
+const getGpaHeatmapColor = (gpa: number | null): string => {
+    if (gpa === null || gpa === undefined) return "rgb(243, 244, 246)"; // gray-100
+    const t = Math.max(0, Math.min(1, (gpa - 2.8) / 1.2));
+    const r = Math.round(239 + (102 - 239) * t);
+    const g = Math.round(83 + (187 - 83) * t);
+    const b = Math.round(80 + (106 - 80) * t);
+    return `rgb(${r},${g},${b})`;
 };
 
 const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
@@ -86,6 +98,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
 };
 
 export default function GpaLineGraph({ data, selectedInstructors }: Props) {
+    const [vizTab, setVizTab] = useState<VizTab>("line");
     const [activeInstructor, setActiveInstructor] = useState<string | null>(null);
     const [isMobile, setIsMobile] = useState(false);
     const [focusMode, setFocusMode] = useState(false);
@@ -212,8 +225,26 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                         </span>
                     )}
                 </div>
-                
-                {selectedInstructors.length > 3 && (
+                {/* Visualization tabs */}
+                <div className="flex gap-1 p-0.5 rounded-lg bg-gray-100" role="tablist" aria-label="Chart type">
+                    {(["line", "bar", "heatmap"] as const).map((tab) => (
+                        <button
+                            key={tab}
+                            type="button"
+                            role="tab"
+                            aria-selected={vizTab === tab}
+                            onClick={() => setVizTab(tab)}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize ${
+                                vizTab === tab
+                                    ? "bg-[#800020] text-white shadow-sm"
+                                    : "text-gray-700 hover:bg-gray-200"
+                            }`}
+                        >
+                            {tab}
+                        </button>
+                    ))}
+                </div>
+                {(vizTab === "line" || vizTab === "bar") && selectedInstructors.length > 3 && (
                     <div className="flex items-center gap-2">
                         <button
                             onClick={toggleFocusMode}
@@ -234,8 +265,8 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                 )}
             </div>
 
-            {/* Mobile optimization hint for many instructors */}
-            {isMobile && selectedInstructors.length > 5 && (
+            {/* Mobile optimization hint for many instructors (Line/Bar only) */}
+            {(vizTab === "line" || vizTab === "bar") && isMobile && selectedInstructors.length > 5 && (
                 <div className="mb-3 p-2 glass rounded-lg text-center border border-[rgba(128,0,32,0.1)]">
                     <span className="text-xs text-[#800020]">
                         Tip: Rotate your device horizontally for a better view of multiple instructors
@@ -243,7 +274,8 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                 </div>
             )}
 
-            {/* Chart container with dynamic height */}
+            {/* Line chart */}
+            {vizTab === "line" && (
             <div className="w-full" style={{ height: `${getOptimalChartHeight()}px` }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart
@@ -369,6 +401,153 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                     </LineChart>
                 </ResponsiveContainer>
             </div>
+            )}
+
+            {/* Bar chart */}
+            {vizTab === "bar" && (
+            <div className="w-full" style={{ height: `${getOptimalChartHeight()}px` }}>
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                        data={chartData}
+                        margin={isMobile
+                            ? { top: 10, right: 10, left: 0, bottom: 60 }
+                            : { top: 10, right: 30, left: 20, bottom: 25 }}
+                        onMouseLeave={() => setActiveInstructor(null)}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis
+                            dataKey="term"
+                            angle={-45}
+                            textAnchor="end"
+                            height={isMobile ? 60 : 85}
+                            tick={{ fontSize: isMobile ? 10 : 12, fontWeight: "bold" }}
+                            tickMargin={isMobile ? 10 : 15}
+                            stroke="#616161"
+                            interval={isMobile ? (terms.length > 6 ? 1 : 0) : 0}
+                        />
+                        <YAxis
+                            domain={[2.8, 4]}
+                            tickCount={isMobile ? 4 : 6}
+                            tick={{ fontSize: isMobile ? 10 : 12, fontWeight: "bold" }}
+                            stroke="#616161"
+                            width={isMobile ? 25 : 35}
+                        />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend
+                            verticalAlign="top"
+                            height={isMobile ? 36 : (selectedInstructors.length > 8 ? 72 : selectedInstructors.length > 4 ? 54 : 36)}
+                            layout="horizontal"
+                            wrapperStyle={{
+                                paddingBottom: isMobile ? "5px" : "10px",
+                                fontSize: isMobile ? "10px" : "13px",
+                                fontWeight: 500,
+                                paddingLeft: isMobile ? "2px" : "10px",
+                                paddingRight: isMobile ? "2px" : "10px",
+                                display: "flex",
+                                flexWrap: isMobile ? "nowrap" : "wrap",
+                                justifyContent: "center",
+                                gap: isMobile ? "2px" : "8px",
+                                lineHeight: "1.2",
+                                margin: 0,
+                                overflow: isMobile ? "auto" : "visible",
+                                overflowX: isMobile ? "auto" : "visible",
+                                whiteSpace: isMobile ? "nowrap" : "normal",
+                                maxWidth: "100%"
+                            }}
+                            onMouseEnter={(e) => setActiveInstructor((e as unknown as { dataKey: string }).dataKey)}
+                            onMouseLeave={() => setActiveInstructor(null)}
+                            onClick={(e) => {
+                                const dataKey = (e as unknown as { dataKey: string }).dataKey;
+                                if (isMobile) setActiveInstructor(dataKey);
+                                if (focusMode) handleInstructorFocus(dataKey);
+                            }}
+                        />
+                        {instructors.map((instructor, index) => {
+                            if (!selectedInstructors.includes(instructor)) return null;
+                            let opacity = 1;
+                            if (focusMode && focusedInstructor) {
+                                opacity = focusedInstructor === instructor ? 1 : 0.2;
+                            } else if (activeInstructor) {
+                                opacity = activeInstructor === instructor ? 1 : 0.3;
+                            }
+                            return (
+                                <Bar
+                                    key={instructor}
+                                    dataKey={instructor}
+                                    name={instructor}
+                                    fill={colors[index % colors.length]}
+                                    fillOpacity={opacity}
+                                    radius={[2, 2, 0, 0]}
+                                    maxBarSize={isMobile ? 24 : 32}
+                                />
+                            );
+                        })}
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+            )}
+
+            {/* Heatmap */}
+            {vizTab === "heatmap" && (
+            <div className="w-full overflow-x-auto">
+                <div
+                    className="inline-block min-w-full"
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: `auto repeat(${terms.length}, minmax(${isMobile ? 48 : 64}px, 1fr))`,
+                        gridTemplateRows: `auto repeat(${filteredInstructors.length}, 36px)`,
+                        gap: 1,
+                        backgroundColor: "rgb(229, 231, 235)",
+                    }}
+                >
+                    <div className="bg-gray-100 font-medium text-xs text-gray-600 flex items-center justify-center px-1 py-2 sticky left-0 z-10" style={{ gridColumn: 1, gridRow: 1 }} />
+                    {terms.map((term, c) => (
+                        <div
+                            key={term}
+                            className="bg-gray-100 font-medium text-xs text-gray-600 flex items-center justify-center py-2 truncate px-0.5"
+                            style={{ gridColumn: c + 2, gridRow: 1 }}
+                            title={term}
+                        >
+                            {term}
+                        </div>
+                    ))}
+                    {filteredInstructors.map((instructor, r) => {
+                        return (
+                            <React.Fragment key={instructor}>
+                                <div
+                                    className="bg-gray-100 font-medium text-xs text-gray-700 flex items-center truncate pl-2 pr-1 py-1 sticky left-0 z-10 border-r border-gray-200"
+                                    style={{ gridColumn: 1, gridRow: r + 2 }}
+                                    title={instructor}
+                                >
+                                    {instructor}
+                                </div>
+                                {terms.map((term, c) => {
+                                    const match = data.find(d => d.term === term && d.instructor === instructor);
+                                    const gpa = match ? match.avg_gpa : null;
+                                    const bg = getGpaHeatmapColor(gpa);
+                                    return (
+                                        <div
+                                            key={`${instructor}-${term}`}
+                                            className="flex items-center justify-center text-xs font-medium transition-opacity hover:opacity-90"
+                                            style={{
+                                                gridColumn: c + 2,
+                                                gridRow: r + 2,
+                                                backgroundColor: bg,
+                                                color: gpa !== null ? (gpa >= 3.2 ? "#1f2937" : "#374151") : "#9ca3af",
+                                            }}
+                                            title={gpa !== null ? `${instructor} – ${term}: ${gpa.toFixed(2)}` : `${instructor} – ${term}: N/A`}
+                                        >
+                                            {gpa !== null ? gpa.toFixed(2) : "—"}
+                                        </div>
+                                    );
+                                })}
+                            </React.Fragment>
+                        );
+                    })}
+                </div>
+                <p className="text-xs text-gray-500 mt-2 text-center">Color scale: lower GPA (red) → higher GPA (green). Value shown in each cell.</p>
+            </div>
+            )}
         </div>
     );
 }
