@@ -173,8 +173,8 @@ export default function CourseDataTable({ data }: Props) {
                             <div className="text-sm text-gray-700">{row.instructor}</div>
                         </div>
                         <div className="flex items-center space-x-2">
-                            <div className={`text-lg font-bold ${getGpaColor(row.average_gpa as number)}`}>
-                                {typeof row.average_gpa === 'number' ? row.average_gpa.toFixed(2) : 'N/A'}
+                            <div className={`text-lg font-bold ${getGpaColor(Number(row.average_gpa))}`}>
+                                {row.average_gpa != null && !Number.isNaN(Number(row.average_gpa)) ? Number(row.average_gpa).toFixed(2) : 'N/A'}
                             </div>
                             {typeof row.rmp_link === 'string' && row.rmp_link && (
                                 <a
@@ -323,20 +323,27 @@ export default function CourseDataTable({ data }: Props) {
                                             RMP
                                         </span>
                                     </a>
-                                ) : key === "average_gpa" && typeof row[key] === "number" ? (
-                                    <span className={`font-medium ${getGpaColor(row[key] as number)} inline-flex items-center`}>
-                                        {(row[key] as number).toFixed(3)}
-                                        {(row[key] as number) > 3.5 && (
+                                ) : key === "average_gpa" ? ( (() => {
+                                        const num = Number(row[key]);
+                                        const valid = row[key] != null && !Number.isNaN(num);
+                                        return valid ? (
+                                    <span className={`font-medium ${getGpaColor(num)} inline-flex items-center`}>
+                                        {num.toFixed(3)}
+                                        {num > 3.5 && (
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                         )}
-                                        {(row[key] as number) < 2.5 && (
+                                        {num < 2.5 && (
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                             </svg>
                                         )}
                                     </span>
+                                        ) : (
+                                    <span>{row[key] !== null && row[key] !== undefined ? String(row[key]) : "-"}</span>
+                                        );
+                                    })()
                                 ) : key === "instructor" ? (
                                     <span className="font-medium text-gray-800">
                                         {row[key]}

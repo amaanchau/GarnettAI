@@ -83,7 +83,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
                             <span className="font-medium truncate max-w-[60px]">{entry.name}</span>
                             <span className="ml-1 flex-shrink-0">
                                 {entry.value !== null && entry.value !== undefined ? (
-                                    <span className={getGpaColor(entry.value)}>
+                                    <span className={getGpaColor(Number(entry.value))}>
                                         {Number(entry.value).toFixed(2)}
                                     </span>
                                 ) : "N/A"}
@@ -152,7 +152,8 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
         const entry: ChartEntry = { term };
         instructors.forEach(instructor => {
             const match = data.find(d => d.term === term && d.instructor === instructor);
-            entry[instructor] = match ? match.avg_gpa : null;
+            const raw = match ? match.avg_gpa : null;
+            entry[instructor] = raw != null && !Number.isNaN(Number(raw)) ? Number(raw) : null;
         });
         return entry;
     });
@@ -523,8 +524,11 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                                 </div>
                                 {terms.map((term, c) => {
                                     const match = data.find(d => d.term === term && d.instructor === instructor);
-                                    const gpa = match ? match.avg_gpa : null;
-                                    const bg = getGpaHeatmapColor(gpa);
+                                    const raw = match ? match.avg_gpa : null;
+                                    const gpaNum = raw != null && !Number.isNaN(Number(raw)) ? Number(raw) : null;
+                                    const bg = getGpaHeatmapColor(gpaNum);
+                                    const displayText = gpaNum !== null ? Number(gpaNum).toFixed(2) : "—";
+                                    const titleText = gpaNum !== null ? `${instructor} – ${term}: ${displayText}` : `${instructor} – ${term}: N/A`;
                                     return (
                                         <div
                                             key={`${instructor}-${term}`}
@@ -533,11 +537,11 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                                                 gridColumn: c + 2,
                                                 gridRow: r + 2,
                                                 backgroundColor: bg,
-                                                color: gpa !== null ? (gpa >= 3.2 ? "#1f2937" : "#374151") : "#9ca3af",
+                                                color: gpaNum !== null ? (gpaNum >= 3.2 ? "#1f2937" : "#374151") : "#9ca3af",
                                             }}
-                                            title={gpa !== null ? `${instructor} – ${term}: ${gpa.toFixed(2)}` : `${instructor} – ${term}: N/A`}
+                                            title={titleText}
                                         >
-                                            {gpa !== null ? gpa.toFixed(2) : "—"}
+                                            {displayText}
                                         </div>
                                     );
                                 })}
