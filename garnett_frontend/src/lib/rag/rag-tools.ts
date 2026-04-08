@@ -9,6 +9,75 @@ import {
 } from "./queries";
 import { scrapeRmpProfessors } from "./rmp-scrape";
 
+type WebSearchSource = {
+  title?: string;
+  url?: string;
+};
+
+type WebSearchResult = {
+  summary: string;
+  sources: WebSearchSource[];
+};
+
+async function runOpenAiWebSearch(query: string): Promise<WebSearchResult> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY is not set");
+  }
+
+  const res = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      tools: [{ type: "web_search_preview", search_context_size: "high" }],
+      input:
+        `Search for up-to-date Texas A&M University (College Station) context.\n\n` +
+        `Query: ${query}\n\n` +
+        `Return concise findings focused on course/professor advising context. Include reliable sources.`,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Web search request failed: ${res.status} ${text}`);
+  }
+
+  const json = (await res.json()) as {
+    output_text?: string;
+    output?: Array<{
+      content?: Array<{
+        type?: string;
+        text?: string;
+        annotations?: Array<{
+          type?: string;
+          title?: string;
+          url?: string;
+        }>;
+      }>;
+    }>;
+  };
+
+  const sourcesMap = new Map<string, WebSearchSource>();
+  for (const item of json.output ?? []) {
+    for (const content of item.content ?? []) {
+      for (const ann of content.annotations ?? []) {
+        if (ann.type === "url_citation" && ann.url) {
+          sourcesMap.set(ann.url, { title: ann.title, url: ann.url });
+        }
+      }
+    }
+  }
+
+  return {
+    summary: json.output_text ?? "",
+    sources: Array.from(sourcesMap.values()).slice(0, 8),
+  };
+}
+
 export function createRagTools() {
   return {
     get_course_gpa_summary: tool({
@@ -126,6 +195,35 @@ export function createRagTools() {
           rateMyProfessorUrls,
           links,
           profilesByProfId: scraped,
+        };
+      },
+    }),
+
+    web_search_tamu_context: tool({
+      description:
+        "Search the live web for additional context about Texas A&M University (College Station) courses/professors. " +
+        "Use this for recent updates, instructor/course context, syllabus/catalog pages, and other TAMU-adjacent details not present in pre-fetched DB data.",
+      inputSchema: z.object({
+        courseName: z.string().optional().describe('Optional course name/code (e.g. "CSCE 221")'),
+        professorName: z.string().optional().describe('Optional professor name'),
+        userQuestion: z.string().describe("The user question to ground search intent"),
+      }),
+      execute: async ({ courseName, professorName, userQuestion }) => {
+        const query = [
+          "Texas A&M University College Station",
+          courseName ? `Course: ${courseName}` : null,
+          professorName ? `Professor: ${professorName}` : null,
+          `Question: ${userQuestion}`,
+        ]
+          .filter(Boolean)
+          .join(". ");
+
+        const result = await runOpenAiWebSearch(query);
+        return {
+          query,
+          keyFindings: result.summary,
+          sources: result.sources,
+          sourceCount: result.sources.length,
         };
       },
     }),
