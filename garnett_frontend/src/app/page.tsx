@@ -151,6 +151,11 @@ type ProfessorLink = {
   name: string;
 };
 
+type WebSource = {
+  title?: string;
+  url?: string;
+};
+
 type Message = {
   content: string;
   isUser: boolean;
@@ -159,6 +164,7 @@ type Message = {
   courseCode?: string;
   courseCodes?: string[];
   professorLinks?: ProfessorLink[];
+  webSources?: WebSource[];
   toolCalls?: string[];
 };
 
@@ -387,6 +393,9 @@ export default function Home() {
                       toolCallsFromServer.length > 0
                         ? toolCallsFromServer
                         : [...accumulatedToolCalls];
+                    const webSources = Array.isArray(data.webSources)
+                      ? (data.webSources as WebSource[]).filter((s) => s.url)
+                      : [];
                     setMessages(prev => [...prev, {
                       content: data.answer,
                       isUser: false,
@@ -395,6 +404,7 @@ export default function Home() {
                       courseCode: data.sessionContext?.activeCourses?.[0],
                       courseCodes: data.sessionContext?.activeCourses || [],
                       professorLinks: profLinksForMessage.length > 0 ? profLinksForMessage : undefined,
+                      webSources: webSources.length > 0 ? webSources : undefined,
                       toolCalls,
                     }]);
                   }
@@ -547,7 +557,7 @@ export default function Home() {
                         )}
                         <div
                           className={`px-4 py-3 rounded-2xl inline-block max-w-[800px] ${message.isUser
-                            ? 'bg-[#373230] text-white border border-white/10 rounded-br-md'
+                            ? 'bg-[#373230] text-white border border-[#404040] rounded-br-md'
                             : 'bg-[#e8e5e2] text-black border border-[#b0b0b0] rounded-bl-md'
                             }`}
                         >
@@ -576,6 +586,42 @@ export default function Home() {
                           />
                         ))}
                       </div>
+                    )}
+                    {!message.isUser && message.webSources && message.webSources.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        className="flex flex-wrap items-center gap-1.5 mt-1 mb-3"
+                      >
+                        <span className="text-[11px] uppercase tracking-wider text-[#888] font-semibold mr-0.5">Sources</span>
+                        {message.webSources.map((source, srcIdx) => {
+                          let favicon = '';
+                          let hostname = '';
+                          try {
+                            hostname = new URL(source.url || '').hostname.replace('www.', '');
+                            favicon = `https://www.google.com/s2/favicons?sz=16&domain=${hostname}`;
+                          } catch { /* skip */ }
+                          return (
+                            <motion.a
+                              key={`${message.id}-src-${srcIdx}`}
+                              initial={{ opacity: 0, y: 4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.25, delay: srcIdx * 0.06 }}
+                              href={source.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={source.title || hostname}
+                              className="inline-flex items-center gap-1 text-[11px] text-[#666] hover:text-black bg-white hover:bg-[#f7f5f3] px-1.5 py-0.5 rounded-full border border-[#C5C5C5]/60 transition-colors"
+                            >
+                              {favicon && (
+                                <img src={favicon} alt="" className="h-3 w-3 shrink-0 rounded-sm" />
+                              )}
+                              {hostname.split('.').slice(-2).join('.')}
+                            </motion.a>
+                          );
+                        })}
+                      </motion.div>
                     )}
                   </div>
                 ))}

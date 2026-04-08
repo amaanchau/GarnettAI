@@ -19,6 +19,20 @@ type WebSearchResult = {
   sources: WebSearchSource[];
 };
 
+const TRUSTED_DOMAINS = [
+  "catalog.tamu.edu",
+  "reddit.com",
+  "ratemyprofessors.com",
+  "people.engr.tamu.edu",
+  "people.tamu.edu",
+  "courserater.io",
+  "coursicle.com",
+  "tamu.libguides.com",
+  "writingcenter.tamu.edu",
+  "artsci.tamu.edu",
+  "engineering.tamu.edu",
+];
+
 async function runOpenAiWebSearch(query: string): Promise<WebSearchResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -32,17 +46,35 @@ async function runOpenAiWebSearch(query: string): Promise<WebSearchResult> {
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
-      tools: [{ type: "web_search_preview", search_context_size: "high" }],
+      model: "gpt-5.4-nano",
+      tools: [
+        {
+          type: "web_search",
+          search_context_size: "high",
+          user_location: { type: "approximate", country: "US" },
+          filters: {
+            allowed_domains: TRUSTED_DOMAINS,
+          },
+        },
+      ],
+      include: ["web_search_call.action.sources"],
       input:
-        `Search for up-to-date Texas A&M University (College Station) context.\n\n` +
-        `Query: ${query}\n\n` +
-        `Return concise findings focused on course/professor advising context. Include reliable sources.`,
+        `${query}\n\n` +
+        `RULES:\n` +
+        `1. Read the actual page content from each search result.\n` +
+        `2. Extract and quote SPECIFIC student comments, opinions, and experiences verbatim or closely paraphrased.\n` +
+        `3. Include concrete details: topics covered, exam types, homework load, project descriptions, tips from students.\n` +
+        `4. If a Reddit thread has comments, quote the top 2-3 most helpful ones.\n` +
+        `5. If a course catalog page lists prerequisites, topics, or credit hours, include those exact details.\n` +
+        `6. Do NOT write generic summaries like "students have mixed opinions" or "the course can be challenging."\n` +
+        `7. Do NOT describe what websites are — extract what they SAY.\n` +
+        `8. Do NOT include any URLs or links in your response text.`,
     }),
   });
 
   if (!res.ok) {
     const text = await res.text();
+    console.error("Web search API error:", res.status, text);
     throw new Error(`Web search request failed: ${res.status} ${text}`);
   }
 
@@ -201,11 +233,13 @@ export function createRagTools() {
 
     web_search_tamu_context: tool({
       description:
-        "Search the live web for additional context about Texas A&M University (College Station) courses/professors. " +
-        "Use this for recent updates, instructor/course context, syllabus/catalog pages, and other TAMU-adjacent details not present in pre-fetched DB data.",
+        "Search the live web for qualitative context about Texas A&M courses/professors. " +
+        "Results are restricted to trusted sources (TAMU catalog, Reddit, RateMyProfessors, Coursicle, etc.). " +
+        "Use for: student opinions, course difficulty/workload, syllabus info, prerequisites, what a course covers, or recent TAMU updates. " +
+        "Do NOT use for purely numerical GPA questions already answered by pre-fetched data.",
       inputSchema: z.object({
         courseName: z.string().optional().describe('Optional course name/code (e.g. "CSCE 221")'),
-        professorName: z.string().optional().describe('Optional professor name'),
+        professorName: z.string().optional().describe("Optional professor name"),
         userQuestion: z.string().describe("The user question to ground search intent"),
       }),
       execute: async ({ courseName, professorName, userQuestion }) => {

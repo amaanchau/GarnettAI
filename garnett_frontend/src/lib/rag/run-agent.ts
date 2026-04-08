@@ -45,6 +45,7 @@ export async function runRagAgentStreaming(params: {
 
   let fullAnswer = "";
   const toolCalls: string[] = [];
+  let webSources: { title?: string; url?: string }[] = [];
   for await (const part of result.fullStream) {
     if (part.type === "text-delta") {
       fullAnswer += part.text;
@@ -62,6 +63,14 @@ export async function runRagAgentStreaming(params: {
       });
     }
     if (part.type === "tool-result") {
+      if (part.toolName === "web_search_tamu_context") {
+        const partAny = part as Record<string, unknown>;
+        const res = (partAny.result ?? partAny.output ?? partAny) as Record<string, unknown>;
+        const sources = (res?.sources ?? (res?.result as Record<string, unknown>)?.sources) as { title?: string; url?: string }[] | undefined;
+        if (Array.isArray(sources)) {
+          webSources = sources.filter((s) => s.url);
+        }
+      }
       send("tool_call_done", {
         toolCallId: part.toolCallId,
         toolName: part.toolName,
@@ -80,6 +89,7 @@ export async function runRagAgentStreaming(params: {
   send("complete", {
     answer: fullAnswer,
     toolCalls,
+    webSources,
     sessionContext: {
       currentCourse: coursesToUse[0] ?? null,
       activeCourses: coursesToUse,
