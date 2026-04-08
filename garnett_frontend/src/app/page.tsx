@@ -531,7 +531,7 @@ export default function Home() {
         <motion.div
           className={`w-full flex flex-col ${conversationStarted
             ? 'flex-1 min-h-0 border-none'
-            : 'max-w-3xl rounded-xl overflow-visible bg-white border border-[#C5C5C5] shadow-sm'
+            : 'max-w-3xl rounded-xl overflow-hidden bg-white border border-[#C5C5C5] shadow-sm shrink-0'
             }`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -684,7 +684,7 @@ export default function Home() {
           </div>
 
           {/* Input area */}
-          <div className={`shrink-0 border-t border-[#C5C5C5]/40 bg-[#f7f5f3] p-4 relative z-20`}>
+          <div className={`shrink-0 border-t border-[#C5C5C5]/40 p-4 relative z-20 ${conversationStarted ? 'bg-[#f7f5f3]' : 'bg-white'}`}>
             <div className={`${conversationStarted ? 'max-w-4xl mx-auto w-full' : ''} mb-2 relative`}>
               <CourseSelector
                 selectedCourses={selectedCourses}
