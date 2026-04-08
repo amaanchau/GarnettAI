@@ -1,25 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --background: rgb(255, 255, 255);
-  --foreground: #171717;
+  --bg-page: #f7f5f3;
+  --text-primary: #000000;
+  --text-secondary: #444444;
+  --text-muted: #888888;
   --maroon-primary: #800020;
   --maroon-light: #a00030;
-  --maroon-lighter: #c00040;
   --maroon-dark: #600018;
-  --maroon-accent: #d4a5a5;
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-border: rgba(128, 0, 32, 0.1);
-  --glass-shadow: 0 8px 32px rgba(128, 0, 32, 0.1);
+  --border-color: #C5C5C5;
+  --card-bg: #ffffff;
+  --disabled-bg: #f2f2f2;
+  --glass-bg: rgba(247, 245, 243, 0.9);
+  --glass-border: var(--border-color);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.09);
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
+  color: var(--text-primary);
+  background: var(--bg-page);
   font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
-
-/* Add this to your global CSS file (globals.css) */
 
 html,
 body {
@@ -27,14 +31,12 @@ body {
   max-width: 100vw;
 }
 
-/* This ensures long text in dropdowns doesn't cause horizontal scrolling */
 .truncate {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Streaming text cursor animation */
 .streaming-text {
   position: relative;
 }
@@ -46,7 +48,7 @@ body {
   top: 0;
   width: 2px;
   height: 1.5rem;
-  background-color: #1f2937;
+  background-color: var(--text-primary);
   animation: blink 1s infinite;
 }
 
@@ -55,114 +57,84 @@ body {
   51%, 100% { opacity: 0; }
 }
 
-/* Glass morphism effects */
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .glass-hover {
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .glass-hover:hover {
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 12px 40px rgba(128, 0, 32, 0.15);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
-/* Maroon gradient backgrounds */
 .maroon-gradient {
   background: linear-gradient(135deg, var(--maroon-primary) 0%, var(--maroon-light) 100%);
 }
 
-.maroon-gradient-light {
-  background: linear-gradient(135deg, var(--maroon-lighter) 0%, var(--maroon-accent) 100%);
-}
-
-/* Modern button styles */
 .btn-modern {
   background: linear-gradient(135deg, var(--maroon-primary) 0%, var(--maroon-light) 100%);
   color: white;
   border: none;
-  border-radius: 12px;
-  padding: 12px 24px;
+  border-radius: 10px;
+  padding: 10px 20px;
   font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(128, 0, 32, 0.2);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(128, 0, 32, 0.2);
 }
 
 .btn-modern:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(128, 0, 32, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(128, 0, 32, 0.3);
 }
 
 .btn-modern:active {
   transform: translateY(0);
 }
 
-/* Modern input styles */
 .input-modern {
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 16px 20px;
-  transition: all 0.3s ease;
-  box-shadow: var(--glass-shadow);
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .input-modern:focus {
   border-color: var(--maroon-primary);
-  box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.1);
+  box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.08);
   outline: none;
 }
 
-/* Card styles */
 .card-modern {
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  box-shadow: var(--glass-shadow);
-  transition: all 0.3s ease;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
 }
 
 .card-modern:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 40px rgba(128, 0, 32, 0.15);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
-/* Custom scrollbar styles */
-.scrollbar-thin {
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db transparent;
-}
-
-.scrollbar-thin::-webkit-scrollbar {
+/* Custom scrollbar */
+::-webkit-scrollbar {
   width: 6px;
 }
-
-.scrollbar-thin::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
 }
-
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: #d1d5db;
+::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
   border-radius: 3px;
 }
-
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: #9ca3af;
-}
-
-.scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
-  background-color: #d1d5db;
-}
-
-.scrollbar-track-transparent::-webkit-scrollbar-track {
-  background: transparent;
+::-webkit-scrollbar-thumb:hover {
+  background-color: #999;
 }

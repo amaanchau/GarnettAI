@@ -45,15 +45,14 @@ interface Props {
 const getGpaColor = (gpa: number): string => {
     if (gpa >= 3.7) return "text-green-600";
     if (gpa >= 3.3) return "text-green-500";
-    if (gpa >= 3.0) return "text-gray-700";
+    if (gpa >= 3.0) return "text-black";
     if (gpa >= 2.7) return "text-yellow-600";
     if (gpa >= 2.3) return "text-orange-500";
     return "text-red-500";
 };
 
-// Heatmap: map GPA to background color (low = red, high = green)
 const getGpaHeatmapColor = (gpa: number | null): string => {
-    if (gpa === null || gpa === undefined) return "rgb(243, 244, 246)"; // gray-100
+    if (gpa === null || gpa === undefined) return "#f7f5f3";
     const t = Math.max(0, Math.min(1, (gpa - 2.8) / 1.2));
     const r = Math.round(239 + (102 - 239) * t);
     const g = Math.round(83 + (187 - 83) * t);
@@ -63,25 +62,22 @@ const getGpaHeatmapColor = (gpa: number | null): string => {
 
 const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
     if (active && payload && payload.length) {
-        // Sort the payload by GPA value in descending order
         const sortedPayload = [...payload].sort((a, b) => {
-            // Handle null or undefined values
             if (a.value === null || a.value === undefined) return 1;
             if (b.value === null || b.value === undefined) return -1;
-            // Sort by value (descending)
             return b.value - a.value;
         });
 
         return (
-            <div className="glass p-2 rounded-lg shadow-md border border-[rgba(128,0,32,0.1)]"
+            <div className="bg-white p-3 rounded-xl shadow-lg border border-[#C5C5C5]"
                 style={{ zIndex: 1000, position: 'relative', maxWidth: '90vw' }}>
-                <p className="font-medium text-gray-900 mb-1 text-xs">{`Term: ${label}`}</p>
+                <p className="font-medium text-black mb-1.5 text-xs">{`Term: ${label}`}</p>
                 <div>
                     {sortedPayload.map((entry, index) => (
                         <p key={`item-${index}`} className="flex items-center mb-0.5 text-xs">
-                            <span className="w-1.5 h-1.5 inline-block mr-1 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }}></span>
-                            <span className="font-medium truncate max-w-[60px]">{entry.name}</span>
-                            <span className="ml-1 flex-shrink-0">
+                            <span className="w-2 h-2 inline-block mr-1.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+                            <span className="font-medium truncate max-w-[80px] text-black">{entry.name}</span>
+                            <span className="ml-1.5 shrink-0">
                                 {entry.value !== null && entry.value !== undefined ? (
                                     <span className={getGpaColor(Number(entry.value))}>
                                         {Number(entry.value).toFixed(2)}
@@ -104,46 +100,23 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
     const [focusMode, setFocusMode] = useState(false);
     const [focusedInstructor, setFocusedInstructor] = useState<string | null>(null);
 
-    // Check if the viewport is mobile size
     useEffect(() => {
-        const checkMobile = () => {
-            setIsMobile(window.innerWidth < 768);
-        };
-
-        // Initial check
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
         checkMobile();
-
-        // Add resize listener
         window.addEventListener('resize', checkMobile);
-
-        // Cleanup
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    // Force re-render when selectedInstructors changes
     useEffect(() => {
-        // This will trigger a re-render when selectedInstructors changes
         setActiveInstructor(null);
         setFocusedInstructor(null);
     }, [selectedInstructors]);
 
-    // Debug log for troubleshooting - must be called in the same order on every render
-    useEffect(() => {
-        console.log("GpaLineGraph render with", selectedInstructors.length, "instructors selected");
-    }, [selectedInstructors]);
-
     const instructors = [...new Set(data.map((d) => d.instructor))];
     const terms = [...new Set(data.map((d) => d.term))].sort((a, b) => {
-        // Extract the season and year from the term string
         const [seasonA, yearA] = a.split(' ');
         const [seasonB, yearB] = b.split(' ');
-
-        // Compare years first
-        if (yearA !== yearB) {
-            return Number(yearA) - Number(yearB);
-        }
-
-        // If years are the same, sort by season
+        if (yearA !== yearB) return Number(yearA) - Number(yearB);
         const seasonOrder = { 'SPRING': 1, 'SUMMER': 2, 'FALL': 3 };
         return seasonOrder[seasonA as keyof typeof seasonOrder] - seasonOrder[seasonB as keyof typeof seasonOrder];
     });
@@ -165,49 +138,37 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
         "#E75480", "#45B1E8", "#9370DB", "#E6A817", "#3CB371"
     ];
 
-    // Filter only the selected instructors
     const filteredInstructors = instructors.filter(
         instructor => selectedInstructors.includes(instructor)
     );
 
-    // Calculate optimal chart height based on number of instructors
     const getOptimalChartHeight = () => {
-        // Base height for desktop
         if (!isMobile) return 400;
-
-        // On mobile, adjust based on number of instructors
-        const instructorCount = selectedInstructors.length;
-        if (instructorCount <= 3) return 350;
-        if (instructorCount <= 6) return 380;
-        return 400; // Max height for many instructors
+        const count = selectedInstructors.length;
+        if (count <= 3) return 350;
+        if (count <= 6) return 380;
+        return 400;
     };
 
-    // Handle focus mode toggle
     const toggleFocusMode = () => {
         setFocusMode(!focusMode);
-        if (focusMode) {
-            setFocusedInstructor(null);
-        }
+        if (focusMode) setFocusedInstructor(null);
     };
 
-    // Handle instructor focus
     const handleInstructorFocus = (instructor: string) => {
-        if (focusMode) {
-            setFocusedInstructor(focusedInstructor === instructor ? null : instructor);
-        }
+        if (focusMode) setFocusedInstructor(focusedInstructor === instructor ? null : instructor);
     };
 
-    // No data or no selected instructors case - check after all hooks are called
     if (data.length === 0 || selectedInstructors.length === 0) {
         return (
-            <div className={`w-full mt-8 p-4 sm:p-6 card-modern transition-shadow hover:shadow-md ${inter.className}`}>
-                <div className="h-60 sm:h-96 flex items-center justify-center text-gray-500">
+            <div className={`w-full mt-6 p-6 bg-white border border-[#C5C5C5] rounded-xl ${inter.className}`}>
+                <div className="h-60 sm:h-80 flex items-center justify-center">
                     <div className="text-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 text-[#800020]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-3 text-[#800020]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
-                        <p className="text-base sm:text-lg font-medium">No data to display</p>
-                        <p className="text-xs sm:text-sm mt-2">Please select at least one instructor to view the GPA trends.</p>
+                        <p className="text-base font-medium text-black">No data to display</p>
+                        <p className="text-sm mt-1 text-[#888]">Select at least one instructor to view GPA trends.</p>
                     </div>
                 </div>
             </div>
@@ -215,19 +176,18 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
     }
 
     return (
-        <div className={`w-full mt-8 p-4 sm:p-6 card-modern transition-shadow hover:shadow-md ${inter.className}`}>
+        <div className={`w-full mt-6 p-4 sm:p-6 bg-white border border-[#C5C5C5] rounded-xl ${inter.className}`}>
             {/* Chart Controls */}
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-gray-800">GPA Trends</h3>
+                    <h3 className="text-lg font-semibold text-black">GPA Trends</h3>
                     {selectedInstructors.length > 3 && (
-                        <span className="text-xs bg-[rgba(128,0,32,0.1)] text-[#800020] px-2 py-1 rounded-full">
+                        <span className="text-xs bg-[#800020] text-white px-2 py-0.5 rounded-full">
                             {selectedInstructors.length} instructors
                         </span>
                     )}
                 </div>
-                {/* Visualization tabs */}
-                <div className="flex gap-1 p-0.5 rounded-lg bg-gray-100" role="tablist" aria-label="Chart type">
+                <div className="flex gap-1 p-0.5 rounded-lg bg-[#f7f5f3] border border-[#C5C5C5]" role="tablist" aria-label="Chart type">
                     {(["line", "bar", "heatmap"] as const).map((tab) => (
                         <button
                             key={tab}
@@ -238,7 +198,7 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize ${
                                 vizTab === tab
                                     ? "bg-[#800020] text-white shadow-sm"
-                                    : "text-gray-700 hover:bg-gray-200"
+                                    : "text-black hover:bg-white"
                             }`}
                         >
                             {tab}
@@ -250,32 +210,28 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                         <button
                             onClick={toggleFocusMode}
                             className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
-                                focusMode 
-                                    ? 'bg-[#800020] text-white' 
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                focusMode
+                                    ? 'bg-[#800020] text-white'
+                                    : 'bg-[#f7f5f3] text-black border border-[#C5C5C5] hover:border-[#800020]'
                             }`}
                         >
                             {focusMode ? 'Exit Focus' : 'Focus Mode'}
                         </button>
                         {focusMode && (
-                            <span className="text-xs text-gray-500">
-                                Click an instructor to focus
-                            </span>
+                            <span className="text-xs text-[#888]">Click an instructor to focus</span>
                         )}
                     </div>
                 )}
             </div>
 
-            {/* Mobile optimization hint for many instructors (Line/Bar only) */}
             {(vizTab === "line" || vizTab === "bar") && isMobile && selectedInstructors.length > 5 && (
-                <div className="mb-3 p-2 glass rounded-lg text-center border border-[rgba(128,0,32,0.1)]">
+                <div className="mb-3 p-2 bg-[#f7f5f3] rounded-lg text-center border border-[#C5C5C5]">
                     <span className="text-xs text-[#800020]">
-                        Tip: Rotate your device horizontally for a better view of multiple instructors
+                        Tip: Rotate your device for a better view of multiple instructors
                     </span>
                 </div>
             )}
 
-            {/* Line chart */}
             {vizTab === "line" && (
             <div className="w-full" style={{ height: `${getOptimalChartHeight()}px` }}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -286,7 +242,7 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                             : { top: 10, right: 30, left: 20, bottom: 25 }}
                         onMouseLeave={() => setActiveInstructor(null)}
                     >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e8e5e2" />
                         <XAxis
                             dataKey="term"
                             angle={-45}
@@ -294,23 +250,21 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                             height={isMobile ? 60 : 85}
                             tick={{ fontSize: isMobile ? 10 : 12, fontWeight: "bold" }}
                             tickMargin={isMobile ? 10 : 15}
-                            stroke="#616161"
+                            stroke="#888"
                             interval={isMobile ? (terms.length > 6 ? 1 : 0) : 0}
                         />
                         <YAxis
                             domain={[2.8, 4]}
                             tickCount={isMobile ? 4 : 6}
                             tick={{ fontSize: isMobile ? 10 : 12, fontWeight: "bold" }}
-                            stroke="#616161"
+                            stroke="#888"
                             width={isMobile ? 25 : 35}
                         />
                         <Tooltip content={<CustomTooltip />} />
-
-                        {/* Enhanced Legend with better interaction */}
                         <Legend
                             verticalAlign="top"
                             height={isMobile ? 36 : (selectedInstructors.length > 8 ? 72 : selectedInstructors.length > 4 ? 54 : 36)}
-                            layout={isMobile ? "horizontal" : "horizontal"}
+                            layout="horizontal"
                             wrapperStyle={{
                                 paddingBottom: isMobile ? "5px" : "10px",
                                 fontSize: isMobile ? "10px" : "13px",
@@ -332,43 +286,27 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                             onMouseLeave={() => setActiveInstructor(null)}
                             onClick={(e) => {
                                 const dataKey = (e as unknown as { dataKey: string }).dataKey;
-                                if (isMobile) {
-                                    setActiveInstructor(dataKey);
-                                }
-                                if (focusMode) {
-                                    handleInstructorFocus(dataKey);
-                                }
+                                if (isMobile) setActiveInstructor(dataKey);
+                                if (focusMode) handleInstructorFocus(dataKey);
                             }}
                         />
-
-                        {/* Lines for all selected instructors */}
                         {instructors.map((instructor, index) => {
-                            // Only render the line if the instructor is in the selectedInstructors array
-                            if (!selectedInstructors.includes(instructor)) {
-                                return null;
-                            }
+                            if (!selectedInstructors.includes(instructor)) return null;
 
-                            // Determine line opacity and stroke width based on focus mode and active states
                             let opacity = 1;
                             let strokeWidth = isMobile ? 1.5 : 2;
 
                             if (focusMode && focusedInstructor) {
-                                // In focus mode, only show focused instructor clearly
                                 if (focusedInstructor === instructor) {
-                                    opacity = 1;
-                                    strokeWidth = 4;
+                                    opacity = 1; strokeWidth = 4;
                                 } else {
-                                    opacity = 0.2;
-                                    strokeWidth = 1;
+                                    opacity = 0.2; strokeWidth = 1;
                                 }
                             } else if (activeInstructor) {
-                                // Normal hover mode
                                 if (activeInstructor === instructor) {
-                                    opacity = 1;
-                                    strokeWidth = 3;
+                                    opacity = 1; strokeWidth = 3;
                                 } else {
-                                    opacity = 0.3;
-                                    strokeWidth = 1;
+                                    opacity = 0.3; strokeWidth = 1;
                                 }
                             }
 
@@ -404,7 +342,6 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
             </div>
             )}
 
-            {/* Bar chart */}
             {vizTab === "bar" && (
             <div className="w-full" style={{ height: `${getOptimalChartHeight()}px` }}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -415,7 +352,7 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                             : { top: 10, right: 30, left: 20, bottom: 25 }}
                         onMouseLeave={() => setActiveInstructor(null)}
                     >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e8e5e2" />
                         <XAxis
                             dataKey="term"
                             angle={-45}
@@ -423,14 +360,14 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
                             height={isMobile ? 60 : 85}
                             tick={{ fontSize: isMobile ? 10 : 12, fontWeight: "bold" }}
                             tickMargin={isMobile ? 10 : 15}
-                            stroke="#616161"
+                            stroke="#888"
                             interval={isMobile ? (terms.length > 6 ? 1 : 0) : 0}
                         />
                         <YAxis
                             domain={[2.8, 4]}
                             tickCount={isMobile ? 4 : 6}
                             tick={{ fontSize: isMobile ? 10 : 12, fontWeight: "bold" }}
-                            stroke="#616161"
+                            stroke="#888"
                             width={isMobile ? 25 : 35}
                         />
                         <Tooltip content={<CustomTooltip />} />
@@ -488,81 +425,76 @@ export default function GpaLineGraph({ data, selectedInstructors }: Props) {
             </div>
             )}
 
-            {/* Heatmap */}
             {vizTab === "heatmap" && (
-            <div className="w-full overflow-x-auto rounded-2xl border border-[rgba(128,0,32,0.1)] shadow-[0_8px_32px_rgba(128,0,32,0.08)] scrollbar-thin">
+            <div className="w-full overflow-x-auto rounded-xl border border-[#C5C5C5]">
                 <div
-                    className="inline-block min-w-full rounded-2xl overflow-hidden"
+                    className="inline-block min-w-full rounded-xl overflow-hidden"
                     style={{
                         display: "grid",
                         gridTemplateColumns: `auto repeat(${terms.length}, minmax(${isMobile ? 48 : 64}px, 1fr))`,
                         gridTemplateRows: `auto repeat(${filteredInstructors.length}, 40px)`,
                         gap: 2,
-                        backgroundColor: "rgba(128, 0, 32, 0.06)",
+                        backgroundColor: "#e8e5e2",
                     }}
                 >
-                    {/* Corner cell */}
                     <div
-                        className="glass font-semibold text-xs text-[#800020] flex items-center justify-center px-2 py-3 sticky left-0 z-20 rounded-tl-2xl border-r border-b border-[rgba(128,0,32,0.12)]"
+                        className="bg-white font-semibold text-xs text-[#800020] flex items-center justify-center px-2 py-3 sticky left-0 z-20 rounded-tl-xl border-r border-b border-[#C5C5C5]"
                         style={{ gridColumn: 1, gridRow: 1 }}
                     />
-                    {/* Term headers */}
                     {terms.map((term, c) => (
                         <div
                             key={term}
-                            className="glass font-semibold text-xs text-[#800020] flex items-center justify-center py-3 truncate px-1 border-b border-[rgba(128,0,32,0.12)]"
+                            className="bg-white font-semibold text-xs text-[#800020] flex items-center justify-center py-3 truncate px-1 border-b border-[#C5C5C5]"
                             style={{ gridColumn: c + 2, gridRow: 1 }}
                             title={term}
                         >
                             {term}
                         </div>
                     ))}
-                    {filteredInstructors.map((instructor, r) => {
-                        return (
-                            <React.Fragment key={instructor}>
-                                <div
-                                    className="glass font-medium text-xs text-gray-700 flex items-center truncate pl-3 pr-2 py-2 sticky left-0 z-10 border-r border-[rgba(128,0,32,0.12)] bg-white/90"
-                                    style={{ gridColumn: 1, gridRow: r + 2 }}
-                                    title={instructor}
-                                >
-                                    {instructor}
-                                </div>
-                                {terms.map((term, c) => {
-                                    const match = data.find(d => d.term === term && d.instructor === instructor);
-                                    const raw = match ? match.avg_gpa : null;
-                                    const gpaNum = raw != null && !Number.isNaN(Number(raw)) ? Number(raw) : null;
-                                    const bg = getGpaHeatmapColor(gpaNum);
-                                    const displayText = gpaNum !== null ? Number(gpaNum).toFixed(2) : "—";
-                                    const titleText = gpaNum !== null ? `${instructor} – ${term}: ${displayText}` : `${instructor} – ${term}: N/A`;
-                                    return (
-                                        <div
-                                            key={`${instructor}-${term}`}
-                                            className="flex items-center justify-center text-xs font-semibold rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-[0_4px_12px_rgba(128,0,32,0.2)] hover:ring-2 hover:ring-[#800020]/30 hover:ring-offset-1 hover:z-[5] cursor-default"
-                                            style={{
-                                                gridColumn: c + 2,
-                                                gridRow: r + 2,
-                                                backgroundColor: bg,
-                                                color: gpaNum !== null ? (gpaNum >= 3.2 ? "#1f2937" : "#374151") : "#9ca3af",
-                                            }}
-                                            title={titleText}
-                                        >
-                                            {displayText}
-                                        </div>
-                                    );
-                                })}
-                            </React.Fragment>
-                        );
-                    })}
+                    {filteredInstructors.map((instructor, r) => (
+                        <React.Fragment key={instructor}>
+                            <div
+                                className="bg-white font-medium text-xs text-black flex items-center truncate pl-3 pr-2 py-2 sticky left-0 z-10 border-r border-[#C5C5C5]"
+                                style={{ gridColumn: 1, gridRow: r + 2 }}
+                                title={instructor}
+                            >
+                                {instructor}
+                            </div>
+                            {terms.map((term, c) => {
+                                const match = data.find(d => d.term === term && d.instructor === instructor);
+                                const raw = match ? match.avg_gpa : null;
+                                const gpaNum = raw != null && !Number.isNaN(Number(raw)) ? Number(raw) : null;
+                                const bg = getGpaHeatmapColor(gpaNum);
+                                const displayText = gpaNum !== null ? Number(gpaNum).toFixed(2) : "—";
+                                const titleText = gpaNum !== null ? `${instructor} – ${term}: ${displayText}` : `${instructor} – ${term}: N/A`;
+                                return (
+                                    <div
+                                        key={`${instructor}-${term}`}
+                                        className="flex items-center justify-center text-xs font-semibold rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-md hover:ring-2 hover:ring-[#800020]/30 hover:ring-offset-1 hover:z-[5] cursor-default"
+                                        style={{
+                                            gridColumn: c + 2,
+                                            gridRow: r + 2,
+                                            backgroundColor: bg,
+                                            color: gpaNum !== null ? (gpaNum >= 3.2 ? "#1f2937" : "#374151") : "#888",
+                                        }}
+                                        title={titleText}
+                                    >
+                                        {displayText}
+                                    </div>
+                                );
+                            })}
+                        </React.Fragment>
+                    ))}
                 </div>
-                <p className="text-xs text-gray-600 mt-3 text-center px-2">
-                    <span className="inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-[rgba(128,0,32,0.06)] border border-[rgba(128,0,32,0.1)]">
+                <p className="text-xs text-[#888] mt-3 text-center px-2 pb-3">
+                    <span className="inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-[#f7f5f3] border border-[#C5C5C5]">
                         <span className="w-2 h-2 rounded-full bg-[#ef5350]" aria-hidden />
                         <span>Lower GPA</span>
-                        <span className="text-[#800020] font-medium">→</span>
+                        <span className="text-[#800020] font-medium">&rarr;</span>
                         <span className="w-2 h-2 rounded-full bg-[#66BB6A]" aria-hidden />
                         <span>Higher GPA</span>
                     </span>
-                    <span className="block mt-1.5 text-gray-500">Hover a cell to see details.</span>
+                    <span className="block mt-1.5 text-[#888]">Hover a cell to see details.</span>
                 </p>
             </div>
             )}

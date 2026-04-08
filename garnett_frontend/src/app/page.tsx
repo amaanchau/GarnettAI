@@ -1,22 +1,26 @@
 "use client";
 import { useState, useRef, useEffect } from 'react';
-import { Inter, Nunito } from 'next/font/google';
+import { Inter, Cormorant_Garamond, Nunito } from 'next/font/google';
 import Navbar from "@/components/Navbar";
 import CourseLinkCard from "@/components/CourseLinkCard";
 import { MarkdownMessage } from "@/components/MarkdownMessage";
 import CourseSelector from "@/components/CourseSelector";
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// Using Inter for a cleaner, more modern look
 const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
 });
 
-// Using Nunito for headings - simple but distinctive with its rounded edges
+const heading = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  display: 'swap',
+});
+
 const nunito = Nunito({
   subsets: ['latin'],
-  weight: ['600', '700', '800'],
+  weight: ['400', '600', '700'],
   display: 'swap',
 });
 
@@ -69,19 +73,8 @@ function ToolSpinner({ className }: { className?: string }) {
       viewBox="0 0 24 24"
       aria-hidden
     >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-90"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-      />
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
     </svg>
   );
 }
@@ -90,26 +83,16 @@ function ToolCallTags({ toolNames }: { toolNames: string[] }) {
   const unique = uniqueToolCallsInOrder(toolNames);
   if (unique.length === 0) return null;
   return (
-    <div
-      className="flex flex-wrap items-center gap-1.5 mb-2"
-      aria-label="Tools used"
-    >
-      <span className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold mr-0.5">
+    <div className="flex flex-wrap items-center gap-1.5 mb-2" aria-label="Tools used">
+      <span className="text-[11px] uppercase tracking-wider text-[#888] font-semibold mr-0.5">
         Tools
       </span>
       {unique.map((name) => (
         <span
           key={name}
-          className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-[rgba(128,0,32,0.06)] text-[#800020] border border-[rgba(128,0,32,0.12)]"
+          className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-[#f7f5f3] text-[#800020] border border-[#C5C5C5]"
         >
-          <svg
-            className="h-3 w-3 text-emerald-600 shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2.5}
-            aria-hidden
-          >
+          <svg className="h-3 w-3 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
           {formatToolCallLabel(name)}
@@ -122,13 +105,8 @@ function ToolCallTags({ toolNames }: { toolNames: string[] }) {
 function StreamingToolSteps({ steps }: { steps: ToolStep[] }) {
   if (steps.length === 0) return null;
   return (
-    <div
-      className="flex flex-wrap items-center gap-1.5 mb-2"
-      role="status"
-      aria-live="polite"
-      aria-label="Tool progress"
-    >
-      <span className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold mr-0.5">
+    <div className="flex flex-wrap items-center gap-1.5 mb-2" role="status" aria-live="polite" aria-label="Tool progress">
+      <span className="text-[11px] uppercase tracking-wider text-[#888] font-semibold mr-0.5">
         Tools
       </span>
       {steps.map((step) => {
@@ -139,50 +117,28 @@ function StreamingToolSteps({ steps }: { steps: ToolStep[] }) {
             key={step.id}
             className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border ${
               isError
-                ? "bg-red-50 text-red-800 border-red-200"
+                ? "bg-red-50 text-red-700 border-red-200"
                 : isRunning
-                  ? "bg-[rgba(128,0,32,0.06)] text-[#800020] border-[rgba(128,0,32,0.2)]"
-                  : "bg-emerald-50/80 text-emerald-900 border-emerald-200/80"
+                  ? "bg-[#f7f5f3] text-[#800020] border-[#800020]/20"
+                  : "bg-emerald-50 text-emerald-800 border-emerald-200"
             }`}
           >
-            {isRunning && (
-              <ToolSpinner className="h-3.5 w-3.5 text-[#800020]" />
-            )}
+            {isRunning && <ToolSpinner className="h-3.5 w-3.5 text-[#800020]" />}
             {step.status === "done" && (
-              <svg
-                className="h-3.5 w-3.5 text-emerald-600 shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                aria-hidden
-              >
+              <svg className="h-3.5 w-3.5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             )}
             {isError && (
-              <svg
-                className="h-3.5 w-3.5 text-red-600 shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                aria-hidden
-              >
+              <svg className="h-3.5 w-3.5 text-red-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             )}
             <span>
               {formatToolCallLabel(step.toolName)}
-              {isRunning && (
-                <span className="sr-only"> — running</span>
-              )}
-              {step.status === "done" && (
-                <span className="sr-only"> — finished</span>
-              )}
-              {isError && (
-                <span className="sr-only"> — failed</span>
-              )}
+              {isRunning && <span className="sr-only"> — running</span>}
+              {step.status === "done" && <span className="sr-only"> — finished</span>}
+              {isError && <span className="sr-only"> — failed</span>}
             </span>
           </span>
         );
@@ -191,18 +147,16 @@ function StreamingToolSteps({ steps }: { steps: ToolStep[] }) {
   );
 }
 
-// Message type definition
 type Message = {
   content: string;
   isUser: boolean;
   id?: string;
   hasCourseLink?: boolean;
   courseCode?: string;
-  courseCodes?: string[]; // For multiple courses
+  courseCodes?: string[];
   toolCalls?: string[];
 };
 
-// Session context type
 type SessionContext = {
   currentCourse: string | null;
   activeCourses: string[];
@@ -224,10 +178,10 @@ export default function Home() {
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [selectedProfessorsByCourse, setSelectedProfessorsByCourse] = useState<Record<string, string[]>>({});
+  const [submitError, setSubmitError] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // Function to handle stopping the current request
   const handleStopRequest = () => {
     if (abortController) {
       abortController.abort();
@@ -238,7 +192,6 @@ export default function Home() {
     setStreamingResponse('');
   };
 
-  // Function to handle starting a new chat
   const handleNewChat = () => {
     setMessages([]);
     setConversationStarted(false);
@@ -285,9 +238,9 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem('selectedCourses', JSON.stringify(selectedCourses));
     localStorage.setItem('selectedProfessorsByCourse', JSON.stringify(selectedProfessorsByCourse));
-  }, [selectedCourses, selectedProfessorsByCourse]);
+    if (selectedCourses.length > 0 && submitError) setSubmitError('');
+  }, [selectedCourses, selectedProfessorsByCourse, submitError]);
 
-  // Auto-resize the textarea based on content
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -295,19 +248,24 @@ export default function Home() {
     }
   }, [inputValue]);
 
-  // Scroll to bottom of chat when messages or streaming response changes
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages, streamingResponse]);
 
-  const canSend = selectedCourses.length > 0 && inputValue.trim().length > 0 && !isLoading && !isStreaming;
+  const canSend = inputValue.trim().length > 0 && !isLoading && !isStreaming;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!inputValue.trim() || selectedCourses.length === 0) return;
+    if (!inputValue.trim()) return;
+
+    if (selectedCourses.length === 0) {
+      setSubmitError('Please select at least one course first');
+      setTimeout(() => setSubmitError(''), 3000);
+      return;
+    }
 
     const userMessage = inputValue;
 
@@ -346,7 +304,6 @@ export default function Home() {
         throw new Error(`Server responded with ${response.status}`);
       }
 
-      // Handle streaming response
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
 
@@ -372,7 +329,6 @@ export default function Home() {
 
               switch (data.type) {
                 case 'status':
-                  // Ignore status updates - we removed progress display
                   break;
 
                 case 'tool_call_start':
@@ -407,8 +363,7 @@ export default function Home() {
 
                 case 'chunk':
                   accumulatedResponse += data.content;
-                  // Add delay to control streaming speed
-                  await new Promise(resolve => setTimeout(resolve, 55)); // 50ms delay - adjust this value
+                  await new Promise(resolve => setTimeout(resolve, 55));
                   setStreamingResponse(accumulatedResponse);
                   break;
 
@@ -424,19 +379,17 @@ export default function Home() {
                       toolCallsFromServer.length > 0
                         ? toolCallsFromServer
                         : [...accumulatedToolCalls];
-                  // Add final complete message to chat
-                  setMessages(prev => [...prev, {
-                    content: data.answer,
-                    isUser: false,
-                    id: Date.now().toString(),
-                    hasCourseLink: data.sessionContext?.activeCourses?.length > 0,
-                    courseCode: data.sessionContext?.activeCourses?.[0],
-                    courseCodes: data.sessionContext?.activeCourses || [],
-                    toolCalls,
-                  }]);
+                    setMessages(prev => [...prev, {
+                      content: data.answer,
+                      isUser: false,
+                      id: Date.now().toString(),
+                      hasCourseLink: data.sessionContext?.activeCourses?.length > 0,
+                      courseCode: data.sessionContext?.activeCourses?.[0],
+                      courseCodes: data.sessionContext?.activeCourses || [],
+                      toolCalls,
+                    }]);
                   }
 
-                  // Update session context
                   if (data.sessionContext) {
                     setSessionContext(data.sessionContext);
                   }
@@ -454,13 +407,10 @@ export default function Home() {
 
     } catch (error) {
       console.error("API Error:", error);
-      
-      // Check if the error is due to abort
+
       if (error instanceof Error && error.name === 'AbortError') {
         console.log('Request was aborted by user');
-        // Don't add error message for user-initiated aborts
       } else {
-        // Handle other exceptions
         setMessages(prev => [...prev, {
           content: "Whoop! We're having trouble connecting right now. Please try again later.",
           isUser: false,
@@ -478,23 +428,12 @@ export default function Home() {
     }
   };
 
-  // Sample prompts with icons
   const samplePrompts = [
-    {
-      text: "Who is the easiest professor?",
-      icon: "👨‍🏫"
-    },
-    {
-      text: "Compare these professors by GPA and reviews",
-      icon: "📊"
-    },
-    {
-      text: "Which professor gives the best grades?",
-      icon: "📚"
-    }
+    { text: "Who is the easiest professor?", icon: "👨‍🏫" },
+    { text: "Compare these professors by GPA and reviews", icon: "📊" },
+    { text: "Which professor gives the best grades?", icon: "📚" }
   ];
 
-  // Handle keyboard shortcuts
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -510,41 +449,35 @@ export default function Home() {
   };
 
   return (
-    <div className={`flex flex-col h-screen overflow-hidden bg-white ${inter.className} font-medium`}>
+    <div className={`flex flex-col h-screen overflow-hidden bg-[#f7f5f3] ${inter.className}`}>
       <Navbar onNewChat={handleNewChat} conversationStarted={conversationStarted} />
 
-      <main className={`flex-1 min-h-0 flex flex-col items-center ${conversationStarted ? 'w-full p-0 mt-10' : 'px-4 py-6 overflow-y-auto'}`}>
+      <main className={`flex-1 min-h-0 flex flex-col items-center ${conversationStarted ? 'w-full p-0 mt-0' : 'px-4 py-8 overflow-y-auto'}`}>
 
-
-        {/* Header and intro section - only show if conversation hasn't started */}
         {!conversationStarted && (
           <>
             <motion.div
-              className="text-center mb-6 max-w-5xl mx-auto"
+              className="text-center mb-8 max-w-3xl mx-auto"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
               <motion.h1
-                className={`text-5xl font-bold text-[#800020] mb-4 tracking-tight inline-block ${nunito.className}`}
-                whileHover={{
-                  scale: 1.05,
-                  color: '#600018', // A darker maroon on hover
-                  transition: { duration: 0.3 }
-                }}
+                className={`text-6xl font-bold text-[#800020] mb-4 tracking-tight ${heading.className}`}
+                whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
               >
-                Aggie AI💡
+                Aggie AI
               </motion.h1>
-              <p className="text-xl text-gray-600 max-w-3xl leading-relaxed">
-                Ask anything about Texas A&M courses & professors! Get insights on grading, difficulty, and professor ratings using GPA data & Rate My Professor reviews.
+              <p className={`text-xl text-[#444] max-w-2xl mx-auto leading-relaxed ${nunito.className}`}>
+                Ask anything about Texas A&M courses & professors. Get insights on grading, difficulty, and professor ratings.
               </p>
             </motion.div>
 
             <motion.div
-              className="w-full max-w-3xl grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
+              className="w-full max-w-3xl grid grid-cols-1 md:grid-cols-3 gap-3 mb-8"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.3, staggerChildren: 0.1 }}
+              transition={{ delay: 0.3 }}
             >
               {samplePrompts.map((prompt, index) => (
                 <motion.div
@@ -552,17 +485,14 @@ export default function Home() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 + 0.3 }}
-                  whileHover={{
-                    scale: 1.03,
-                    boxShadow: "0 16px 40px rgba(128, 0, 32, 0.15)"
-                  }}
-                  className="card-modern p-6 cursor-pointer text-gray-700 flex flex-col glass-hover"
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  className="bg-white border border-[#C5C5C5] rounded-xl p-5 cursor-pointer flex flex-col hover:shadow-md transition-shadow"
                   onClick={() => handleSamplePromptClick(prompt.text)}
                 >
-                  <span className="text-3xl mb-3">{prompt.icon}</span>
-                  <span className="text-base">{prompt.text}</span>
+                  <span className="text-2xl mb-2">{prompt.icon}</span>
+                  <span className="text-sm text-black leading-snug">{prompt.text}</span>
                   <div className="mt-auto pt-3">
-                    <div className="h-1 w-16 maroon-gradient rounded-full"></div>
+                    <div className="h-0.5 w-12 bg-[#800020] rounded-full opacity-40"></div>
                   </div>
                 </motion.div>
               ))}
@@ -570,11 +500,10 @@ export default function Home() {
           </>
         )}
 
-        {/* Adjust chat container size based on whether conversation has started */}
         <motion.div
           className={`w-full flex flex-col ${conversationStarted
             ? 'flex-1 min-h-0 border-none'
-            : 'max-w-3xl rounded-2xl overflow-hidden card-modern'
+            : 'max-w-3xl rounded-xl overflow-hidden bg-white border border-[#C5C5C5] shadow-sm'
             }`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -585,53 +514,48 @@ export default function Home() {
           <div
             ref={chatContainerRef}
             className={`overflow-y-auto ${conversationStarted ? 'flex-1 min-h-0 w-full mx-auto' : 'flex-grow p-4'}`}
-            style={conversationStarted ? undefined : { maxHeight: 'calc(100vh - 350px)', minHeight: '250px' }}
+            style={conversationStarted ? undefined : { maxHeight: 'calc(100vh - 400px)', minHeight: '250px' }}
           >
             {messages.length === 0 ? (
               <div className="flex justify-center items-center h-full">
-                <div className="text-center text-gray-500">
-                  <svg className="w-12 h-12 mx-auto mb-4 text-[#800020]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                <div className="text-center text-[#888]">
+                  <svg className="w-10 h-10 mx-auto mb-3 text-[#800020] opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                   </svg>
-                  <p className="font-medium text-lg">Ask a question to get started!</p>
-                  <p className="text-base mt-2">Try one of the example prompts above or ask your own question.</p>
+                  <p className="font-medium text-black">Start a conversation</p>
+                  <p className="text-sm mt-1">Try one of the prompts above or type your own question.</p>
                 </div>
               </div>
             ) : (
-              <div className={conversationStarted ? "w-full max-w-7xl mx-auto px-4 mt-1" : ""}>
+              <div className={conversationStarted ? "w-full max-w-4xl mx-auto px-4 py-2" : ""}>
                 {messages.map((message, index) => (
                   <div key={index}>
-                    <div
-                      className={`mb-4 flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className="max-w-[1000px]">
-                        {!message.isUser &&
-                          message.toolCalls &&
-                          message.toolCalls.length > 0 && (
-                            <ToolCallTags toolNames={message.toolCalls} />
-                          )}
+                    <div className={`mb-4 flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
+                      <div className="max-w-[800px]">
+                        {!message.isUser && message.toolCalls && message.toolCalls.length > 0 && (
+                          <ToolCallTags toolNames={message.toolCalls} />
+                        )}
                         <div
-                          className={`p-3 rounded-xl inline-block max-w-[1000px] text-lg ${message.isUser
-                            ? 'bg-gray-50 text-gray-800'
-                            : 'bg-white text-gray-800 rounded-tl-none'
+                          className={`px-4 py-3 rounded-2xl inline-block max-w-[800px] ${message.isUser
+                            ? 'bg-[#373230] text-white border border-white/10 rounded-br-md'
+                            : 'bg-[#e8e5e2] text-black border border-[#b0b0b0] rounded-bl-md'
                             }`}
                         >
                           {message.isUser ? (
-                            <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                            <p className="whitespace-pre-wrap leading-relaxed text-[15px]">{message.content}</p>
                           ) : (
-                            <MarkdownMessage content={message.content} className="text-lg" />
+                            <MarkdownMessage content={message.content} className="text-[15px]" />
                           )}
                         </div>
                       </div>
                     </div>
-                    {/* Show course link cards for AI responses when courses are detected */}
                     {!message.isUser && message.hasCourseLink && message.courseCodes && message.courseCodes.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-1 mb-3">
                         {message.courseCodes.map((courseCode, courseIndex) => (
-                          <CourseLinkCard 
+                          <CourseLinkCard
                             key={`${message.id}-course-${courseIndex}`}
-                            courseCode={courseCode} 
-                            isVisible={true} 
+                            courseCode={courseCode}
+                            isVisible={true}
                           />
                         ))}
                       </div>
@@ -640,63 +564,46 @@ export default function Home() {
                 ))}
               </div>
             )}
-            {/* Streaming response display */}
+
+            {/* Streaming response */}
             {isStreaming && (
-              <div className={conversationStarted ? "w-full max-w-7xl mx-auto px-4" : ""}>
+              <div className={conversationStarted ? "w-full max-w-4xl mx-auto px-4" : ""}>
                 <div className="flex mb-4 justify-start w-full">
-                  <div className="p-3 rounded-xl rounded-tl-none bg-white text-gray-800 max-w-[1000px] text-lg">
+                  <div className="px-4 py-3 rounded-2xl rounded-bl-md bg-[#e8e5e2] text-black border border-[#b0b0b0] max-w-[800px]">
                     {streamingToolSteps.length > 0 && (
                       <StreamingToolSteps steps={streamingToolSteps} />
                     )}
-                    {/* Streaming text */}
                     {streamingResponse ? (
-                      <div className="relative">
-                        <MarkdownMessage content={streamingResponse} className="text-lg" />
-                        <span className="inline-block w-0.5 h-5 align-middle bg-gray-800 animate-pulse ml-0.5" />
+                      <div className="relative inline">
+                        <MarkdownMessage content={streamingResponse} className="text-[15px] inline" />
+                        <span className="inline-block w-2 h-2 rounded-full bg-[#800020] animate-pulse align-middle ml-1" />
                       </div>
                     ) : (
-                      /* Simple typing indicator while waiting for response */
-                      <div className="flex items-center text-gray-500">
-                        <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                        </div>
-                      </div>
+                      <span className="inline-block w-2 h-2 rounded-full bg-[#800020] animate-pulse" />
                     )}
                   </div>
                 </div>
-                
-                {/* Stop indicator */}
-                <div className="flex justify-start mb-2">
-                  <div className="text-xs text-gray-500 flex items-center">
-                    <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse mr-2"></div>
-                    Generating response... Click the stop button to cancel
-                  </div>
-                </div>
-                {/* Show course link cards for streaming responses when courses are detected */}
                 {sessionContext.activeCourses && sessionContext.activeCourses.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-1 mb-3 px-3">
                     {sessionContext.activeCourses.map((courseCode, courseIndex) => (
-                      <CourseLinkCard 
+                      <CourseLinkCard
                         key={`streaming-course-${courseIndex}`}
-                        courseCode={courseCode} 
-                        isVisible={true} 
+                        courseCode={courseCode}
+                        isVisible={true}
                       />
                     ))}
                   </div>
                 )}
               </div>
             )}
-            
-            {/* Fallback loading indicator for non-streaming */}
+
             {isLoading && !isStreaming && (
-              <div className={conversationStarted ? "w-full max-w-7xl mx-auto px-4" : ""}>
+              <div className={conversationStarted ? "w-full max-w-4xl mx-auto px-4" : ""}>
                 <div className="flex mb-4 justify-start w-full">
-                  <div className="p-3 rounded-xl rounded-tl-none flex items-center inline-block">
-                    <div className="relative flex h-5 w-5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500"></span>
+                  <div className="p-3 rounded-2xl rounded-bl-md flex items-center">
+                    <div className="relative flex h-4 w-4">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#800020] opacity-30"></span>
+                      <span className="relative inline-flex rounded-full h-4 w-4 bg-[#800020]"></span>
                     </div>
                   </div>
                 </div>
@@ -704,9 +611,9 @@ export default function Home() {
             )}
           </div>
 
-          {/* Input box with glass effect and maroon accent */}
-          <div className={`shrink-0 border-t ${conversationStarted ? 'border-gray-200' : 'border-[rgba(128,0,32,0.1)]'} p-4 glass`}>
-            <div className={`${conversationStarted ? 'max-w-7xl mx-auto w-full' : ''} mb-2`}>
+          {/* Input area */}
+          <div className={`shrink-0 border-t border-[#C5C5C5]/40 bg-[#f7f5f3] p-4`}>
+            <div className={`${conversationStarted ? 'max-w-4xl mx-auto w-full' : ''} mb-2`}>
               <CourseSelector
                 selectedCourses={selectedCourses}
                 selectedProfessorsByCourse={selectedProfessorsByCourse}
@@ -714,7 +621,7 @@ export default function Home() {
                 onProfessorsChange={setSelectedProfessorsByCourse}
               />
             </div>
-            <form onSubmit={handleSubmit} className={`relative ${conversationStarted ? 'max-w-7xl mx-auto w-full' : ''}`}>
+            <form onSubmit={handleSubmit} className={`relative ${conversationStarted ? 'max-w-4xl mx-auto w-full' : ''}`}>
               <textarea
                 ref={textareaRef}
                 value={inputValue}
@@ -727,62 +634,79 @@ export default function Home() {
                 onBlur={() => setIsTyping(inputValue.length > 0)}
                 placeholder={
                   selectedCourses.length === 0
-                    ? "Select at least one course above to start..."
+                    ? "Ask about any course or professor..."
                     : selectedCourses.length === 1
                     ? `Ask about ${selectedCourses[0]}...`
                     : `Ask about ${selectedCourses[0]} and ${selectedCourses.length - 1} other course${selectedCourses.length > 2 ? 's' : ''}...`
                 }
-                className={`w-full py-4 px-5 pr-16 rounded-xl border text-lg ${isTyping ? 'border-[#800020] ring-2 ring-[rgba(128,0,32,0.1)]' : 'border-[rgba(128,0,32,0.1)]'} outline-none resize-y overflow-y-auto transition-all ${selectedCourses.length === 0 ? 'bg-gray-50 cursor-not-allowed' : 'input-modern'}`}
-                style={{ minHeight: '60px', maxHeight: '200px' }}
+                className={`w-full py-3 px-4 pr-14 rounded-xl border text-[15px] text-black placeholder:text-[#999] ${
+                  submitError
+                    ? 'border-red-400 ring-2 ring-red-100'
+                    : isTyping
+                      ? 'border-[#800020] ring-2 ring-[#800020]/10'
+                      : 'border-[#C5C5C5]'
+                } outline-none resize-y overflow-y-auto transition-all bg-white`}
+                style={{ minHeight: '52px', maxHeight: '200px' }}
                 rows={1}
-                disabled={selectedCourses.length === 0}
               />
-              
-              {/* Stop button - appears during streaming */}
+
               {isStreaming && (
                 <motion.button
                   type="button"
                   onClick={handleStopRequest}
                   whileTap={{ scale: 0.95 }}
                   whileHover={{ scale: 1.05 }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-10 h-10 flex items-center justify-center maroon-gradient text-white hover:shadow-lg transition-all"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-9 h-9 flex items-center justify-center bg-[#800020] text-white hover:bg-[#600018] transition-colors"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </motion.button>
               )}
-              {/* Submit button - hidden during streaming */}
               {!isStreaming && (
                 <motion.button
                   type="submit"
                   whileTap={{ scale: 0.95 }}
                   whileHover={{ scale: 1.05 }}
-                  className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-10 h-10 flex items-center justify-center ${canSend ? 'maroon-gradient text-white' : 'bg-[rgba(128,0,32,0.1)] text-[#800020]'
-                    } transition-all`}
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 w-9 h-9 flex items-center justify-center transition-all ${
+                    canSend
+                      ? 'bg-[#800020] text-white hover:bg-[#600018]'
+                      : 'bg-[#f2f2f2] text-[#C5C5C5]'
+                  }`}
                   disabled={!canSend}
-                  style={{ lineHeight: 1 }} // Ensure proper centering
                 >
                   {isLoading ? (
-                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                   ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                     </svg>
                   )}
                 </motion.button>
               )}
             </form>
+            <AnimatePresence>
+              {submitError && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className={`text-red-500 text-xs mt-1.5 ${conversationStarted ? 'max-w-4xl mx-auto w-full' : ''}`}
+                >
+                  {submitError}
+                </motion.p>
+              )}
+            </AnimatePresence>
           </div>
         </motion.div>
       </main>
 
       {!conversationStarted && (
-        <footer className="py-2 text-center text-gray-500 text-sm border-t border-[rgba(128,0,32,0.1)]">
-          <p>© 2025 Aggie AI - Help Texas A&M Students Find the Right Classes</p>
+        <footer className="py-2 text-center text-[#888] text-xs border-t border-[#C5C5C5]/40">
+          <p>&copy; 2025 Aggie AI &mdash; Texas A&M Course & Professor Insights</p>
         </footer>
       )}
     </div>

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 type InstructorInfo = {
   instructor: string;
@@ -35,6 +36,7 @@ export default function CourseSelector({
     Record<string, boolean>
   >({});
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
+  const [isFocused, setIsFocused] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -64,6 +66,7 @@ export default function CourseSelector({
         !wrapperRef.current.contains(e.target as Node)
       ) {
         setShowDropdown(false);
+        setExpandedCourse(null);
       }
     }
     document.addEventListener("mousedown", onClickOutside);
@@ -146,196 +149,88 @@ export default function CourseSelector({
     ? selectedProfessorsByCourse[expandedCourse] ?? []
     : [];
 
-  return (
-    <div className="w-full space-y-1.5" ref={wrapperRef}>
-      {/* Professor panel (above chips so it doesn't push below the textarea) */}
-      {expandedCourse && (
-        <div className="border border-gray-200 rounded-lg bg-gray-50/60 max-h-40 overflow-y-auto">
-          <div className="flex items-center justify-between px-3 pt-2 pb-1">
-            <span className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold">
-              {expandedCourse} &mdash; Select professors (optional)
-            </span>
-            <button
-              type="button"
-              onClick={() => setExpandedCourse(null)}
-              className="text-gray-400 hover:text-gray-600 p-0.5"
-              aria-label="Close professor panel"
-            >
-              <svg
-                className="h-3.5 w-3.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-          <div className="px-2 pb-2">
-            {expandedLoading ? (
-              <div className="flex items-center gap-2 text-xs text-gray-400 py-2 px-1">
-                <svg
-                  className="animate-spin h-3.5 w-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                Loading instructors...
-              </div>
-            ) : expandedInstructors && expandedInstructors.length > 0 ? (
-              <div className="space-y-0.5">
-                {expandedInstructors.map((inst) => {
-                  const checked = expandedProfs.includes(inst.instructor);
-                  return (
-                    <label
-                      key={inst.instructor}
-                      className={`flex items-center gap-2 px-2 py-1 rounded cursor-pointer text-sm transition-colors ${
-                        checked
-                          ? "bg-[rgba(128,0,32,0.06)]"
-                          : "hover:bg-gray-100"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() =>
-                          toggleProfessor(expandedCourse, inst.instructor)
-                        }
-                        className="rounded border-gray-300 text-[#800020] focus:ring-[#800020] h-3.5 w-3.5"
-                      />
-                      <span className="font-medium text-gray-700 text-xs">
-                        {inst.instructor}
-                      </span>
-                      <span className="text-[11px] text-gray-400 ml-auto tabular-nums">
-                        {inst.avg_gpa.toFixed(2)} GPA &middot; {inst.n_sections} sec
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 py-2 px-1">
-                No instructor data available
-              </p>
-            )}
-          </div>
-        </div>
-      )}
+  const atMax = selectedCourses.length >= maxCourses;
 
-      {/* Selected course chips */}
-      {selectedCourses.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
+  return (
+    <div className="w-full relative" ref={wrapperRef}>
+      {/* Unified tag-input container */}
+      <div
+        className={`flex flex-wrap items-center gap-1.5 bg-white rounded-xl px-3 py-2 border transition-all min-h-[40px] cursor-text ${
+          isFocused
+            ? "border-[#800020] ring-2 ring-[#800020]/10"
+            : "border-[#C5C5C5]"
+        }`}
+        onClick={() => inputRef.current?.focus()}
+      >
+        {/* Course tags inline */}
+        <AnimatePresence mode="popLayout">
           {selectedCourses.map((course) => {
             const isActive = expandedCourse === course;
             const profCount = (selectedProfessorsByCourse[course] ?? []).length;
             return (
-              <span
+              <motion.span
                 key={course}
-                className={`inline-flex items-center text-xs font-semibold rounded-full border transition-colors ${
+                layout
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className={`inline-flex items-center text-xs font-semibold rounded-lg transition-all select-none ${
                   isActive
-                    ? "bg-[#800020] text-white border-[#800020]"
-                    : "bg-[rgba(128,0,32,0.06)] text-[#800020] border-[rgba(128,0,32,0.15)]"
+                    ? "bg-[#800020] text-white"
+                    : "bg-[#f7f5f3] text-black"
                 }`}
               >
-                {/* Clickable label area toggles professor panel */}
                 <button
                   type="button"
-                  onClick={() => toggleExpanded(course)}
-                  className={`inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-l-full transition-colors ${
-                    isActive ? "" : "hover:bg-[rgba(128,0,32,0.08)]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleExpanded(course);
+                  }}
+                  className={`inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-l-lg transition-colors ${
+                    isActive ? "" : "hover:bg-[#eae8e6]"
                   }`}
-                  title="Click to select professors"
+                  title="Select professors"
                 >
                   {course}
                   {profCount > 0 && (
-                    <span
-                      className={`text-[10px] ${
-                        isActive ? "text-white/70" : "text-gray-400"
-                      }`}
-                    >
-                      ({profCount})
+                    <span className={`text-[10px] leading-none px-1 py-0.5 rounded-full ${
+                      isActive ? "bg-white/20 text-white" : "bg-[#800020]/10 text-[#800020]"
+                    }`}>
+                      {profCount}
                     </span>
                   )}
-                  {/* Chevron hint */}
                   <svg
-                    className={`h-3 w-3 transition-transform ${
-                      isActive ? "rotate-180" : ""
-                    } ${isActive ? "text-white/60" : "text-gray-400"}`}
+                    className={`h-2.5 w-2.5 transition-transform ${isActive ? "rotate-180 text-white/60" : "text-[#888]"}`}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
-                    strokeWidth={2.5}
+                    strokeWidth={3}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M19 9l-7 7-7-7"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                {/* X remove button */}
                 <button
                   type="button"
-                  onClick={() => removeCourse(course)}
-                  className={`pr-1.5 pl-0.5 py-1 rounded-r-full transition-colors ${
-                    isActive ? "hover:bg-white/20" : "hover:bg-gray-200"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeCourse(course);
+                  }}
+                  className={`px-1 py-1 rounded-r-lg transition-colors ${
+                    isActive ? "hover:bg-white/20" : "hover:bg-[#eae8e6]"
                   }`}
                   aria-label={`Remove ${course}`}
                 >
-                  <svg
-                    className="h-3 w-3"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2.5}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-              </span>
+              </motion.span>
             );
           })}
-        </div>
-      )}
+        </AnimatePresence>
 
-      {/* Search input (own row, dropdown opens upward) */}
-      {selectedCourses.length < maxCourses && (
-        <div className="relative">
-          <svg
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none z-10"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+        {/* Inline search input */}
+        {!atMax && (
           <input
             ref={inputRef}
             type="text"
@@ -344,48 +239,128 @@ export default function CourseSelector({
               setSearchQuery(e.target.value);
               setShowDropdown(true);
             }}
-            onFocus={() => setShowDropdown(true)}
+            onFocus={() => {
+              setIsFocused(true);
+              if (searchQuery || selectedCourses.length === 0) setShowDropdown(true);
+            }}
+            onBlur={() => setIsFocused(false)}
             placeholder={
               coursesLoading
-                ? "Loading courses..."
+                ? "Loading..."
                 : selectedCourses.length === 0
-                  ? "Add a course (e.g. CSCE 221)..."
-                  : "Add another course..."
+                  ? "Add courses (e.g. CSCE 221)..."
+                  : "Add course..."
             }
             disabled={coursesLoading}
-            className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 focus:border-[#800020] focus:ring-1 focus:ring-[rgba(128,0,32,0.1)] outline-none transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
+            className="flex-1 min-w-[120px] bg-transparent text-sm text-black placeholder:text-[#aaa] outline-none py-0.5 disabled:cursor-not-allowed"
           />
+        )}
+        {atMax && (
+          <span className="text-[11px] text-[#888] py-0.5">
+            Max {maxCourses} courses
+          </span>
+        )}
+      </div>
 
-          {/* Dropdown — opens upward so it doesn't clip off-screen */}
-          {showDropdown && !coursesLoading && filteredCourses.length > 0 && (
-            <div className="absolute z-50 bottom-full mb-1 left-0 w-full max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg">
-              {filteredCourses.map((course) => {
-                const isSelected = selectedCourses.includes(course);
-                return (
-                  <button
-                    key={course}
-                    type="button"
-                    onClick={() => !isSelected && addCourse(course)}
-                    disabled={isSelected}
-                    className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${
-                      isSelected
-                        ? "bg-gray-50 text-gray-400 cursor-not-allowed"
-                        : "hover:bg-[rgba(128,0,32,0.04)] text-gray-700"
-                    }`}
-                  >
-                    <span className="font-medium">{course}</span>
-                    {isSelected && (
-                      <span className="ml-2 text-xs text-gray-400">
-                        (selected)
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+      {/* Search dropdown — opens upward */}
+      {showDropdown && !coursesLoading && filteredCourses.length > 0 && (
+        <div className="absolute z-50 bottom-full mb-1 left-0 w-full max-h-52 overflow-y-auto bg-white border border-[#C5C5C5] rounded-xl shadow-lg">
+          {filteredCourses.map((course) => {
+            const isSelected = selectedCourses.includes(course);
+            return (
+              <button
+                key={course}
+                type="button"
+                onClick={() => !isSelected && addCourse(course)}
+                disabled={isSelected}
+                className={`w-full text-left px-3 py-2 text-sm transition-colors first:rounded-t-xl last:rounded-b-xl ${
+                  isSelected
+                    ? "bg-[#f2f2f2] text-[#aaa] cursor-not-allowed"
+                    : "text-black hover:bg-[#f7f5f3]"
+                }`}
+              >
+                <span className="font-medium">{course}</span>
+                {isSelected && (
+                  <span className="ml-2 text-xs text-[#aaa]">(added)</span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
+
+      {/* Professor panel — floating below the input */}
+      <AnimatePresence>
+        {expandedCourse && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.15 }}
+            className="absolute z-40 bottom-full mb-1 left-0 w-full bg-white border border-[#C5C5C5] rounded-xl shadow-lg max-h-48 overflow-y-auto"
+          >
+            <div className="flex items-center justify-between px-3 pt-2.5 pb-1">
+              <span className="text-[11px] uppercase tracking-wider text-[#888] font-semibold">
+                {expandedCourse} Professors
+              </span>
+              <button
+                type="button"
+                onClick={() => setExpandedCourse(null)}
+                className="text-[#888] hover:text-black p-0.5 transition-colors"
+                aria-label="Close"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="px-2 pb-2">
+              {expandedLoading ? (
+                <div className="flex items-center gap-2 text-xs text-[#888] py-3 px-1">
+                  <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Loading...
+                </div>
+              ) : expandedInstructors && expandedInstructors.length > 0 ? (
+                <div className="space-y-0.5">
+                  {expandedInstructors.map((inst) => {
+                    const checked = expandedProfs.includes(inst.instructor);
+                    return (
+                      <label
+                        key={inst.instructor}
+                        className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg cursor-pointer text-sm transition-colors ${
+                          checked ? "bg-[#800020]/5" : "hover:bg-[#f7f5f3]"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            toggleProfessor(expandedCourse, inst.instructor)
+                          }
+                          className="rounded border-[#C5C5C5] text-[#800020] focus:ring-[#800020] h-3.5 w-3.5"
+                        />
+                        <span className="font-medium text-black text-xs flex-1">
+                          {inst.instructor}
+                        </span>
+                        <span className="text-[11px] text-[#888] tabular-nums">
+                          {inst.avg_gpa.toFixed(2)} &middot; {inst.n_sections}s
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-[#888] py-3 px-1">
+                  No instructor data available
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
