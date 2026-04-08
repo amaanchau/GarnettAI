@@ -34,8 +34,8 @@ export default function Navbar({ onNewChat, conversationStarted }: NavbarProps) 
     }, [isMenuOpen]);
 
     return (
-        <nav className="w-full sticky top-0 z-50 bg-[#f7f5f3] border-b border-[#C5C5C5]/40">
-            <div className="container mx-auto px-6 py-3">
+        <nav className="w-full sticky top-0 z-50 bg-[#f7f5f3]">
+            <div className="container mx-auto px-6 py-3 border-b-[1.5px] border-[#C5C5C5]/40">
                 <div className="flex justify-between items-center">
                     <div className="hidden md:flex items-center gap-2">
                         <Link href="/" className={`flex items-center gap-3 px-5 py-2.5 text-black font-bold text-xl rounded-xl hover:bg-black/[0.03] transition-colors ${nunito.className}`}>
