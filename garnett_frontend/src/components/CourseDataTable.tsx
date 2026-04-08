@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { Inter } from 'next/font/google';
 
 const inter = Inter({
@@ -122,7 +123,13 @@ export default function CourseDataTable({ data }: Props) {
                     >
                         <div className="flex-1">
                             <div className="font-medium text-black">{row.term}</div>
-                            <div className="text-sm text-[#444]">{row.instructor}</div>
+                            <Link
+                                href={`/anex?professor=${encodeURIComponent(String(row.instructor))}`}
+                                className="text-sm text-[#444] hover:text-[#800020] hover:underline transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {row.instructor}
+                            </Link>
                         </div>
                         <div className="flex items-center space-x-2">
                             <div className={`text-lg font-bold ${getGpaColor(Number(row.average_gpa))}`}>
@@ -276,7 +283,12 @@ export default function CourseDataTable({ data }: Props) {
                                         <span className="text-[#888]">{row[key] !== null && row[key] !== undefined ? String(row[key]) : "-"}</span>
                                     );
                                 })() : key === "instructor" ? (
-                                    <span className="font-medium text-black">{row[key]}</span>
+                                    <Link
+                                        href={`/anex?professor=${encodeURIComponent(String(row[key]))}`}
+                                        className="font-medium text-black hover:text-[#800020] hover:underline transition-colors"
+                                    >
+                                        {row[key]}
+                                    </Link>
                                 ) : (
                                     <span className="text-[#444]">{row[key] !== null && row[key] !== undefined ? row[key] : "-"}</span>
                                 )}

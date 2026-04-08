@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Inter, Cormorant_Garamond, Nunito } from 'next/font/google';
 import Navbar from "@/components/Navbar";
-import CourseLinkCard from "@/components/CourseLinkCard";
+import CourseLinkCard, { ProfessorLinkCard } from "@/components/CourseLinkCard";
 import { MarkdownMessage } from "@/components/MarkdownMessage";
 import CourseSelector from "@/components/CourseSelector";
 import { motion, AnimatePresence } from 'framer-motion';
@@ -147,6 +147,10 @@ function StreamingToolSteps({ steps }: { steps: ToolStep[] }) {
   );
 }
 
+type ProfessorLink = {
+  name: string;
+};
+
 type Message = {
   content: string;
   isUser: boolean;
@@ -154,6 +158,7 @@ type Message = {
   hasCourseLink?: boolean;
   courseCode?: string;
   courseCodes?: string[];
+  professorLinks?: ProfessorLink[];
   toolCalls?: string[];
 };
 
@@ -273,6 +278,9 @@ export default function Home() {
       setConversationStarted(true);
     }
 
+    const profNames = [...new Set(Object.values(selectedProfessorsByCourse).flat())];
+    const profLinksForMessage: ProfessorLink[] = profNames.map(name => ({ name }));
+
     setMessages(prev => [...prev, { content: userMessage, isUser: true }]);
     setInputValue('');
     setIsLoading(true);
@@ -386,6 +394,7 @@ export default function Home() {
                       hasCourseLink: data.sessionContext?.activeCourses?.length > 0,
                       courseCode: data.sessionContext?.activeCourses?.[0],
                       courseCodes: data.sessionContext?.activeCourses || [],
+                      professorLinks: profLinksForMessage.length > 0 ? profLinksForMessage : undefined,
                       toolCalls,
                     }]);
                   }
@@ -549,12 +558,19 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
-                    {!message.isUser && message.hasCourseLink && message.courseCodes && message.courseCodes.length > 0 && (
+                    {!message.isUser && ((message.hasCourseLink && message.courseCodes && message.courseCodes.length > 0) || (message.professorLinks && message.professorLinks.length > 0)) && (
                       <div className="flex flex-wrap gap-1.5 mt-1 mb-3">
-                        {message.courseCodes.map((courseCode, courseIndex) => (
+                        {message.courseCodes?.map((courseCode, courseIndex) => (
                           <CourseLinkCard
                             key={`${message.id}-course-${courseIndex}`}
                             courseCode={courseCode}
+                            isVisible={true}
+                          />
+                        ))}
+                        {message.professorLinks?.map((prof, profIndex) => (
+                          <ProfessorLinkCard
+                            key={`${message.id}-prof-${profIndex}`}
+                            professorName={prof.name}
                             isVisible={true}
                           />
                         ))}

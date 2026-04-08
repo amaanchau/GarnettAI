@@ -558,17 +558,35 @@ export async function findCoursesForInstructor(
 ) {
   const client = await pool.connect();
   try {
-    const { rows: allTables } = await client.query(
-      `SELECT table_name
-       FROM information_schema.tables
-       WHERE table_schema = 'public'
-         AND table_name != 'professor'
-       ORDER BY table_name`
+    const trimmed = instructorPattern.trim();
+    const escaped = trimmed.replace(/%/g, "\\%").replace(/_/g, "\\_");
+    const pattern = `%${escaped}%`;
+    const commaKey = lastCommaInitialKey(trimmed);
+
+    // Try to resolve via professor.course_tables for fast lookup
+    const { rows: profRows } = await client.query(
+      `SELECT instructor, course_tables FROM professor
+       WHERE instructor ILIKE $1
+       ORDER BY char_length(instructor) ASC
+       LIMIT 1`,
+      [pattern]
     );
 
-    let tableNames: string[] = allTables.map(
-      (r: { table_name: string }) => r.table_name
-    );
+    let tableNames: string[];
+
+    if (profRows.length > 0 && Array.isArray(profRows[0].course_tables) && profRows[0].course_tables.length > 0) {
+      tableNames = (profRows[0].course_tables as string[]).filter((t) => isSafeTableName(t));
+    } else {
+      // Fallback: full table scan if professor not found or course_tables not populated
+      const { rows: allTables } = await client.query(
+        `SELECT table_name
+         FROM information_schema.tables
+         WHERE table_schema = 'public'
+           AND table_name != 'professor'
+         ORDER BY table_name`
+      );
+      tableNames = allTables.map((r: { table_name: string }) => r.table_name);
+    }
 
     if (department) {
       const prefix = department.toLowerCase().replace(/\s+/g, "");
@@ -579,14 +597,14 @@ export async function findCoursesForInstructor(
       return { instructor: instructorPattern, courses: [] };
     }
 
-    const trimmed = instructorPattern.trim();
-    const escaped = trimmed.replace(/%/g, "\\%").replace(/_/g, "\\_");
-    const pattern = `%${escaped}%`;
-    const commaKey = lastCommaInitialKey(trimmed);
-    const whereInstructor = commaKey
-      ? `(instructor ILIKE $1 OR strpos(lower(instructor), $2) > 0)`
-      : `instructor ILIKE $1`;
-    const unionParams = commaKey ? [pattern, commaKey] : [pattern];
+    // Use exact match when we resolved a professor row, ILIKE otherwise
+    const exactName = profRows.length > 0 ? (profRows[0].instructor as string) : null;
+    const whereInstructor = exactName
+      ? `instructor = $1`
+      : commaKey
+        ? `(instructor ILIKE $1 OR strpos(lower(instructor), $2) > 0)`
+        : `instructor ILIKE $1`;
+    const unionParams = exactName ? [exactName] : commaKey ? [pattern, commaKey] : [pattern];
 
     const unionParts = tableNames
       .filter((t) => isSafeTableName(t))
