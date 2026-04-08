@@ -675,7 +675,7 @@ export default function Home() {
           </div>
 
           {/* Input area */}
-          <div className={`shrink-0 border-t border-[#C5C5C5]/40 bg-[#f7f5f3] p-4`}>
+          <div className={`shrink-0 border-t border-[#C5C5C5]/40 bg-[#f7f5f3] p-4 overflow-hidden`}>
             <div className={`${conversationStarted ? 'max-w-4xl mx-auto w-full' : ''} mb-2`}>
               <CourseSelector
                 selectedCourses={selectedCourses}
@@ -708,7 +708,7 @@ export default function Home() {
                     : isTyping
                       ? 'border-[#800020] ring-2 ring-[#800020]/10'
                       : 'border-[#C5C5C5]'
-                } outline-none resize-y overflow-y-auto transition-all bg-white`}
+                } outline-none resize-none overflow-y-auto transition-all bg-white`}
                 style={{ minHeight: '52px', maxHeight: '200px' }}
                 rows={1}
               />
