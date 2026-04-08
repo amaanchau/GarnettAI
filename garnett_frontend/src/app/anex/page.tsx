@@ -12,6 +12,33 @@ import { motion, AnimatePresence } from 'framer-motion';
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 const heading = Cormorant_Garamond({ subsets: ['latin'], weight: ['500', '600', '700'], display: 'swap' });
 
+function TypewriterText({ text, className }: { text: string; className?: string }) {
+    const [displayed, setDisplayed] = useState('');
+    const [key, setKey] = useState(0);
+
+    useEffect(() => {
+        setDisplayed('');
+        setKey((k) => k + 1);
+    }, [text]);
+
+    useEffect(() => {
+        if (displayed.length >= text.length) return;
+        const timeout = setTimeout(() => {
+            setDisplayed(text.slice(0, displayed.length + 1));
+        }, 35);
+        return () => clearTimeout(timeout);
+    }, [displayed, text, key]);
+
+    return (
+        <span className={className}>
+            {displayed}
+            {displayed.length < text.length && (
+                <span className="inline-block w-[2px] h-[1em] bg-[#800020] ml-0.5 animate-pulse align-middle" />
+            )}
+        </span>
+    );
+}
+
 interface Course { code: string; name?: string; }
 
 interface GPARecord { term: string; instructor: string; avg_gpa: number; }
@@ -540,7 +567,9 @@ function AnexPageInner() {
                                                     {professorOverview.instructor.charAt(0)}
                                                 </div>
                                                 <div>
-                                                    <h2 className="text-xl font-bold text-black">{professorOverview.instructor}</h2>
+                                                    <h2 className={`text-2xl font-bold text-black ${heading.className}`}>
+                                                        <TypewriterText text={professorOverview.instructor} />
+                                                    </h2>
                                                     {professorOverview.department && (
                                                         <p className="text-sm text-[#888]">{professorOverview.department}</p>
                                                     )}
