@@ -438,9 +438,9 @@ export default function Home() {
   };
 
   const samplePrompts = [
-    { text: "Who is the easiest professor?", icon: "👨‍🏫" },
-    { text: "Compare these professors by GPA and reviews", icon: "📊" },
-    { text: "Which professor gives the best grades?", icon: "📚" }
+    { text: "What do students say about this course online?", icon: "🌐" },
+    { text: "Who should I take for this class and why?", icon: "🔍" },
+    { text: "Break down the grade distributions and professor ratings", icon: "📊" }
   ];
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -533,6 +533,7 @@ export default function Home() {
                   </svg>
                   <p className="font-medium text-black">Start a conversation</p>
                   <p className="text-sm mt-1">Try one of the prompts above or type your own question.</p>
+                  <p className="text-xs text-[#888] mt-2">Make sure to select at least one course above to get started.</p>
                 </div>
               </div>
             ) : (
