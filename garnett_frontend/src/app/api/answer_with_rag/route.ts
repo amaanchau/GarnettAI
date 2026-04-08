@@ -50,6 +50,7 @@ export async function POST(req: Request) {
 
     const rawSelectedCourses: unknown = body.selectedCourses;
     const rawSelectedProfs: unknown = body.selectedProfessorsByCourse;
+    const rawStandaloneProfs: unknown = body.selectedStandaloneProfessors;
 
     console.log(`Query: "${query}" (Streaming: ${useStreaming})`);
 
@@ -57,50 +58,53 @@ export async function POST(req: Request) {
       return Response.json({ error: "Missing query" }, { status: 400 });
     }
 
-    if (
-      !Array.isArray(rawSelectedCourses) ||
-      rawSelectedCourses.length === 0 ||
-      !rawSelectedCourses.every((c): c is string => typeof c === "string")
-    ) {
-      return Response.json(
-        { error: "selectedCourses must be a non-empty string array (max 5)" },
-        { status: 400 }
-      );
-    }
-
-    const selectedCourses: string[] = rawSelectedCourses.slice(0, 5);
+    const selectedCourses: string[] = Array.isArray(rawSelectedCourses)
+      ? (rawSelectedCourses.filter((c): c is string => typeof c === "string")).slice(0, 5)
+      : [];
     const selectedProfessorsByCourse: Record<string, string[]> =
       rawSelectedProfs && typeof rawSelectedProfs === "object"
         ? (rawSelectedProfs as Record<string, string[]>)
         : {};
+    const selectedStandaloneProfessors: string[] = Array.isArray(rawStandaloneProfs)
+      ? (rawStandaloneProfs.filter((p): p is string => typeof p === "string")).slice(0, 5)
+      : [];
 
-    const existenceResults = await checkMultipleCoursesExist(selectedCourses);
-    const validCourses = selectedCourses.filter((c) => existenceResults[c]);
-    const invalidCourses = selectedCourses.filter((c) => !existenceResults[c]);
-
-    if (validCourses.length === 0) {
-      const courseString = invalidCourses.join(", ");
-      const answer = `Howdy! I don't have any data for ${courseString}. This might not be a valid Texas A&M course code, or we haven't loaded this course's data yet. Please check the course code and try again, or ask about a different course.`;
-      if (!useStreaming) {
-        return Response.json({
-          answer,
-          sessionContext: { currentCourse: null, activeCourses: [] },
-        });
-      }
-      return makeSseResponse({
-        type: "complete",
-        answer,
-        sessionContext: { currentCourse: null, activeCourses: [] },
-        _metadata: { responseTime: Date.now() - requestStartTime },
-      });
+    if (selectedCourses.length === 0 && selectedStandaloneProfessors.length === 0) {
+      return Response.json(
+        { error: "Select at least one course or professor" },
+        { status: 400 }
+      );
     }
 
-    const coursesToUse = validCourses;
+    let coursesToUse: string[] = [];
+    if (selectedCourses.length > 0) {
+      const existenceResults = await checkMultipleCoursesExist(selectedCourses);
+      coursesToUse = selectedCourses.filter((c) => existenceResults[c]);
+      const invalidCourses = selectedCourses.filter((c) => !existenceResults[c]);
+
+      if (coursesToUse.length === 0 && selectedStandaloneProfessors.length === 0) {
+        const courseString = invalidCourses.join(", ");
+        const answer = `Howdy! I don't have any data for ${courseString}. This might not be a valid Texas A&M course code, or we haven't loaded this course's data yet. Please check the course code and try again, or ask about a different course.`;
+        if (!useStreaming) {
+          return Response.json({
+            answer,
+            sessionContext: { currentCourse: null, activeCourses: [] },
+          });
+        }
+        return makeSseResponse({
+          type: "complete",
+          answer,
+          sessionContext: { currentCourse: null, activeCourses: [] },
+          _metadata: { responseTime: Date.now() - requestStartTime },
+        });
+      }
+    }
 
     if (!useStreaming) {
       const prefetched = await prefetchSelectedContext(
         coursesToUse,
-        selectedProfessorsByCourse
+        selectedProfessorsByCourse,
+        selectedStandaloneProfessors
       );
       const result = await runRagAgentGenerate({
         query,
@@ -139,7 +143,8 @@ export async function POST(req: Request) {
 
           const prefetched = await prefetchSelectedContext(
             coursesToUse,
-            selectedProfessorsByCourse
+            selectedProfessorsByCourse,
+            selectedStandaloneProfessors
           );
 
           send("tool_call_done", {

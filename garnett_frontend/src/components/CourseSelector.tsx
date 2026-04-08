@@ -8,11 +8,19 @@ type InstructorInfo = {
   n_sections: number;
 };
 
+type ProfessorSearchResult = {
+  instructor: string;
+  department: string | null;
+  rmp_link: string | null;
+};
+
 type CourseSelectorProps = {
   selectedCourses: string[];
   selectedProfessorsByCourse: Record<string, string[]>;
+  selectedStandaloneProfessors: string[];
   onCoursesChange: (courses: string[]) => void;
   onProfessorsChange: (profs: Record<string, string[]>) => void;
+  onStandaloneProfessorsChange: (profs: string[]) => void;
   maxCourses?: number;
 };
 
@@ -21,8 +29,10 @@ const MAX_COURSES = 5;
 export default function CourseSelector({
   selectedCourses,
   selectedProfessorsByCourse,
+  selectedStandaloneProfessors,
   onCoursesChange,
   onProfessorsChange,
+  onStandaloneProfessorsChange,
   maxCourses = MAX_COURSES,
 }: CourseSelectorProps) {
   const [allCourses, setAllCourses] = useState<string[]>([]);
@@ -37,6 +47,8 @@ export default function CourseSelector({
   >({});
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const [professorResults, setProfessorResults] = useState<ProfessorSearchResult[]>([]);
+  const profSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -104,6 +116,46 @@ export default function CourseSelector({
       .filter((c) => c.replace(/\s+/g, "").includes(q))
       .slice(0, 50);
   }, [allCourses, searchQuery]);
+
+  // Debounced professor search when query looks like a name (contains letters, no leading digits)
+  useEffect(() => {
+    if (profSearchTimer.current) clearTimeout(profSearchTimer.current);
+    const q = searchQuery.trim();
+    if (q.length < 2 || /^\d/.test(q)) {
+      setProfessorResults([]);
+      return;
+    }
+    // Only search professors if course results are sparse
+    if (filteredCourses.length > 5) {
+      setProfessorResults([]);
+      return;
+    }
+    profSearchTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search_professors?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (Array.isArray(data.professors)) {
+          setProfessorResults(data.professors);
+        }
+      } catch {
+        setProfessorResults([]);
+      }
+    }, 250);
+    return () => {
+      if (profSearchTimer.current) clearTimeout(profSearchTimer.current);
+    };
+  }, [searchQuery, filteredCourses.length]);
+
+  const addStandaloneProfessor = (name: string) => {
+    if (selectedStandaloneProfessors.includes(name)) return;
+    onStandaloneProfessorsChange([...selectedStandaloneProfessors, name]);
+    setSearchQuery("");
+    setShowDropdown(false);
+  };
+
+  const removeStandaloneProfessor = (name: string) => {
+    onStandaloneProfessorsChange(selectedStandaloneProfessors.filter((p) => p !== name));
+  };
 
   const addCourse = (course: string) => {
     if (selectedCourses.includes(course) || selectedCourses.length >= maxCourses)
@@ -229,6 +281,40 @@ export default function CourseSelector({
           })}
         </AnimatePresence>
 
+        {/* Standalone professor tags */}
+        <AnimatePresence mode="popLayout">
+          {selectedStandaloneProfessors.map((prof) => (
+            <motion.span
+              key={`prof-${prof}`}
+              layout
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="inline-flex items-center text-xs font-semibold rounded-lg bg-[#444]/10 text-[#444]"
+            >
+              <span className="inline-flex items-center gap-1 pl-2 pr-1 py-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                {prof}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeStandaloneProfessor(prof);
+                }}
+                className="px-1 py-1 rounded-r-lg hover:bg-[#444]/10 transition-colors"
+                aria-label={`Remove ${prof}`}
+              >
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </motion.span>
+          ))}
+        </AnimatePresence>
+
         {/* Inline search input */}
         {!atMax && (
           <input
@@ -247,9 +333,9 @@ export default function CourseSelector({
             placeholder={
               coursesLoading
                 ? "Loading..."
-                : selectedCourses.length === 0
-                  ? "Add courses (e.g. CSCE 221)..."
-                  : "Add course..."
+                : selectedCourses.length === 0 && selectedStandaloneProfessors.length === 0
+                  ? "Add courses or professors..."
+                  : "Add course or professor..."
             }
             disabled={coursesLoading}
             className="flex-1 min-w-[120px] bg-transparent text-sm text-black placeholder:text-[#aaa] outline-none py-0.5 disabled:cursor-not-allowed"
@@ -263,29 +349,74 @@ export default function CourseSelector({
       </div>
 
       {/* Search dropdown — opens upward */}
-      {showDropdown && !coursesLoading && filteredCourses.length > 0 && (
+      {showDropdown && !coursesLoading && (filteredCourses.length > 0 || professorResults.length > 0) && (
         <div className="absolute z-50 bottom-full mb-1 left-0 w-full max-h-52 overflow-y-auto bg-white border border-[#C5C5C5] rounded-xl shadow-lg">
-          {filteredCourses.map((course) => {
-            const isSelected = selectedCourses.includes(course);
-            return (
-              <button
-                key={course}
-                type="button"
-                onClick={() => !isSelected && addCourse(course)}
-                disabled={isSelected}
-                className={`w-full text-left px-3 py-2 text-sm transition-colors first:rounded-t-xl last:rounded-b-xl ${
-                  isSelected
-                    ? "bg-[#f2f2f2] text-[#aaa] cursor-not-allowed"
-                    : "text-black hover:bg-[#f7f5f3]"
-                }`}
-              >
-                <span className="font-medium">{course}</span>
-                {isSelected && (
-                  <span className="ml-2 text-xs text-[#aaa]">(added)</span>
-                )}
-              </button>
-            );
-          })}
+          {filteredCourses.length > 0 && (
+            <>
+              {professorResults.length > 0 && (
+                <div className="px-3 pt-2 pb-1">
+                  <span className="text-[10px] uppercase tracking-wider text-[#888] font-semibold">Courses</span>
+                </div>
+              )}
+              {filteredCourses.map((course) => {
+                const isSelected = selectedCourses.includes(course);
+                return (
+                  <button
+                    key={course}
+                    type="button"
+                    onClick={() => !isSelected && addCourse(course)}
+                    disabled={isSelected}
+                    className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                      isSelected
+                        ? "bg-[#f2f2f2] text-[#aaa] cursor-not-allowed"
+                        : "text-black hover:bg-[#f7f5f3]"
+                    }`}
+                  >
+                    <span className="font-medium">{course}</span>
+                    {isSelected && (
+                      <span className="ml-2 text-xs text-[#aaa]">(added)</span>
+                    )}
+                  </button>
+                );
+              })}
+            </>
+          )}
+          {professorResults.length > 0 && (
+            <>
+              <div className="px-3 pt-2 pb-1 border-t border-[#C5C5C5]/30">
+                <span className="text-[10px] uppercase tracking-wider text-[#888] font-semibold">Professors</span>
+              </div>
+              {professorResults.map((prof) => {
+                const isSelected = selectedStandaloneProfessors.includes(prof.instructor);
+                return (
+                  <button
+                    key={`prof-${prof.instructor}`}
+                    type="button"
+                    onClick={() => !isSelected && addStandaloneProfessor(prof.instructor)}
+                    disabled={isSelected}
+                    className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                      isSelected
+                        ? "bg-[#f2f2f2] text-[#aaa] cursor-not-allowed"
+                        : "text-black hover:bg-[#f7f5f3]"
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-[#888] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span className="font-medium">{prof.instructor}</span>
+                    </span>
+                    {prof.department && (
+                      <span className="ml-2 text-xs text-[#888]">{prof.department}</span>
+                    )}
+                    {isSelected && (
+                      <span className="ml-2 text-xs text-[#aaa]">(added)</span>
+                    )}
+                  </button>
+                );
+              })}
+            </>
+          )}
         </div>
       )}
 

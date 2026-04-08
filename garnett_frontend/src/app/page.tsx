@@ -25,7 +25,7 @@ const nunito = Nunito({
 });
 
 const TOOL_DISPLAY_LABELS: Record<string, string> = {
-  prefetch_course_data: "Fetch course data",
+  prefetch_course_data: "Fetch data",
   resolve_courses: "Resolve courses",
   get_course_gpa_summary: "Course GPA summary",
   rank_instructors_in_course_by_gpa: "Rank profs in course",
@@ -190,6 +190,7 @@ export default function Home() {
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [selectedProfessorsByCourse, setSelectedProfessorsByCourse] = useState<Record<string, string[]>>({});
+  const [selectedStandaloneProfessors, setSelectedStandaloneProfessors] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -213,12 +214,14 @@ export default function Home() {
     setSessionContext({ currentCourse: null, activeCourses: [] });
     setSelectedCourses([]);
     setSelectedProfessorsByCourse({});
+    setSelectedStandaloneProfessors([]);
 
     localStorage.removeItem('chatMessages');
     localStorage.removeItem('sessionContext');
     localStorage.removeItem('conversationStarted');
     localStorage.removeItem('selectedCourses');
     localStorage.removeItem('selectedProfessorsByCourse');
+    localStorage.removeItem('selectedStandaloneProfessors');
 
     window.scrollTo(0, 0);
   };
@@ -229,12 +232,14 @@ export default function Home() {
     const savedConversationState = localStorage.getItem('conversationStarted');
     const savedCourses = localStorage.getItem('selectedCourses');
     const savedProfs = localStorage.getItem('selectedProfessorsByCourse');
+    const savedStandaloneProfs = localStorage.getItem('selectedStandaloneProfessors');
 
     if (savedMessages) setMessages(JSON.parse(savedMessages));
     if (savedContext) setSessionContext(JSON.parse(savedContext));
     if (savedConversationState === 'true') setConversationStarted(true);
     if (savedCourses) setSelectedCourses(JSON.parse(savedCourses));
     if (savedProfs) setSelectedProfessorsByCourse(JSON.parse(savedProfs));
+    if (savedStandaloneProfs) setSelectedStandaloneProfessors(JSON.parse(savedStandaloneProfs));
   }, []);
 
   useEffect(() => {
@@ -250,8 +255,9 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem('selectedCourses', JSON.stringify(selectedCourses));
     localStorage.setItem('selectedProfessorsByCourse', JSON.stringify(selectedProfessorsByCourse));
-    if (selectedCourses.length > 0 && submitError) setSubmitError('');
-  }, [selectedCourses, selectedProfessorsByCourse, submitError]);
+    localStorage.setItem('selectedStandaloneProfessors', JSON.stringify(selectedStandaloneProfessors));
+    if ((selectedCourses.length > 0 || selectedStandaloneProfessors.length > 0) && submitError) setSubmitError('');
+  }, [selectedCourses, selectedProfessorsByCourse, selectedStandaloneProfessors, submitError]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -273,8 +279,8 @@ export default function Home() {
 
     if (!inputValue.trim()) return;
 
-    if (selectedCourses.length === 0) {
-      setSubmitError('Please select at least one course first');
+    if (selectedCourses.length === 0 && selectedStandaloneProfessors.length === 0) {
+      setSubmitError('Please select at least one course or professor first');
       setTimeout(() => setSubmitError(''), 3000);
       return;
     }
@@ -285,7 +291,10 @@ export default function Home() {
       setConversationStarted(true);
     }
 
-    const profNames = [...new Set(Object.values(selectedProfessorsByCourse).flat())];
+    const profNames = [...new Set([
+      ...Object.values(selectedProfessorsByCourse).flat(),
+      ...selectedStandaloneProfessors,
+    ])];
     const profLinksForMessage: ProfessorLink[] = profNames.map(name => ({ name }));
 
     setMessages(prev => [...prev, { content: userMessage, isUser: true }]);
@@ -310,6 +319,7 @@ export default function Home() {
           sessionContext,
           selectedCourses,
           selectedProfessorsByCourse,
+          selectedStandaloneProfessors,
           useStreaming: true,
         }),
         signal: controller.signal,
@@ -542,7 +552,7 @@ export default function Home() {
                   </svg>
                   <p className="font-medium text-black">Start a conversation</p>
                   <p className="text-sm mt-1">Try one of the prompts above or type your own question.</p>
-                  <p className="text-xs text-[#888] mt-2">Make sure to select at least one course above to get started.</p>
+                  <p className="text-xs text-[#888] mt-2">Make sure to select at least one course or professor above to get started.</p>
                 </div>
               </div>
             ) : (
@@ -679,8 +689,10 @@ export default function Home() {
               <CourseSelector
                 selectedCourses={selectedCourses}
                 selectedProfessorsByCourse={selectedProfessorsByCourse}
+                selectedStandaloneProfessors={selectedStandaloneProfessors}
                 onCoursesChange={setSelectedCourses}
                 onProfessorsChange={setSelectedProfessorsByCourse}
+                onStandaloneProfessorsChange={setSelectedStandaloneProfessors}
               />
             </div>
             <form onSubmit={handleSubmit} className={`relative ${conversationStarted ? 'max-w-4xl mx-auto w-full' : ''}`}>

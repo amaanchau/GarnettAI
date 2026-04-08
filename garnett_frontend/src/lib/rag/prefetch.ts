@@ -32,11 +32,30 @@ export type RmpSnapshot = {
   top_tags: string[];
 };
 
+export type ProfessorCourseStat = {
+  course: string;
+  avg_gpa: number | null;
+  sections_count: number;
+  terms_count: number;
+  latest_term: string | null;
+  total_students: number;
+};
+
+export type ProfessorPrefetch = {
+  instructor: string;
+  department: string | null;
+  rmp_link: string | null;
+  courses: ProfessorCourseStat[];
+  rmpSnapshot: RmpSnapshot | null;
+};
+
 export type PrefetchedContext = {
   selectedCourses: string[];
   selectedProfessorsByCourse: Record<string, string[]>;
+  selectedStandaloneProfessors: string[];
   courseSummaries: CourseSummary[];
   rmpSnapshots: RmpSnapshot[];
+  professorPrefetches: ProfessorPrefetch[];
 };
 
 /**
@@ -110,12 +129,94 @@ export async function listInstructorsForCourse(
 const MAX_RMP_PREFETCH = 8;
 
 /**
+ * Fetch professor info (courses taught, stats) directly from the database.
+ * Mirrors the logic in /api/get_professor_courses but runs server-side in the same process.
+ */
+async function fetchProfessorData(instructorName: string): Promise<{
+  instructor: string;
+  department: string | null;
+  rmp_link: string | null;
+  courses: ProfessorCourseStat[];
+} | null> {
+  const client = await pool.connect();
+  try {
+    const pattern = `%${instructorName.replace(/%/g, "\\%").replace(/_/g, "\\_")}%`;
+    const { rows: profRows } = await client.query(
+      `SELECT instructor, rmp_link, department, course_tables
+       FROM professor
+       WHERE instructor ILIKE $1
+       ORDER BY char_length(instructor) ASC
+       LIMIT 1`,
+      [pattern]
+    );
+
+    if (profRows.length === 0) return null;
+
+    const prof = profRows[0];
+    const matchedName = prof.instructor as string;
+    const rmpLink = prof.rmp_link as string | null;
+    const department = prof.department as string | null;
+    const courseTables: string[] = (prof.course_tables as string[]) || [];
+
+    if (courseTables.length === 0) {
+      return { instructor: matchedName, department, rmp_link: rmpLink, courses: [] };
+    }
+
+    const safeTables = courseTables.filter((t) => /^[a-z0-9]+$/.test(t));
+    if (safeTables.length === 0) {
+      return { instructor: matchedName, department, rmp_link: rmpLink, courses: [] };
+    }
+
+    const unionParts = safeTables.map(
+      (t) =>
+        `SELECT '${t.replace(/'/g, "''")}'::text AS course_table,
+                COUNT(*)::int AS sections_count,
+                COUNT(DISTINCT term)::int AS terms_count,
+                MAX(term) AS latest_term,
+                ROUND(AVG(average_gpa)::numeric, 3) AS avg_gpa,
+                SUM(total)::int AS total_students
+         FROM ${t}
+         WHERE instructor = $1
+         GROUP BY 1
+         HAVING COUNT(*) > 0`
+    );
+
+    const { rows } = await client.query(
+      unionParts.join(" UNION ALL ") + " ORDER BY course_table",
+      [matchedName]
+    );
+
+    const courses: ProfessorCourseStat[] = rows.map((r) => {
+      const tableName = r.course_table as string;
+      const m = tableName.match(/^([a-z]+)(\d+)$/i);
+      const courseCode = m ? `${m[1].toUpperCase()} ${m[2]}` : tableName.toUpperCase();
+      return {
+        course: courseCode,
+        avg_gpa: r.avg_gpa != null ? Number(r.avg_gpa) : null,
+        sections_count: Number(r.sections_count),
+        terms_count: Number(r.terms_count),
+        latest_term: r.latest_term,
+        total_students: Number(r.total_students),
+      };
+    });
+
+    return { instructor: matchedName, department, rmp_link: rmpLink, courses };
+  } catch (e) {
+    console.error("fetchProfessorData:", e);
+    return null;
+  } finally {
+    client.release();
+  }
+}
+
+/**
  * Auto-prefetch core data for selected courses and optional professors.
  * Returns structured context the agent receives as part of its prompt.
  */
 export async function prefetchSelectedContext(
   selectedCourses: string[],
-  selectedProfessorsByCourse: Record<string, string[]> = {}
+  selectedProfessorsByCourse: Record<string, string[]> = {},
+  selectedStandaloneProfessors: string[] = []
 ): Promise<PrefetchedContext> {
   const courseSummaries: CourseSummary[] = [];
 
@@ -205,11 +306,66 @@ export async function prefetchSelectedContext(
     }
   }
 
+  // Prefetch standalone professor data in parallel
+  const professorPrefetches: ProfessorPrefetch[] = [];
+  if (selectedStandaloneProfessors.length > 0) {
+    const profDataPromises = selectedStandaloneProfessors.map((name) =>
+      fetchProfessorData(name)
+    );
+    const profDataResults = await Promise.all(profDataPromises);
+
+    const profRmpUrls: { instructor: string; rmpLink: string | null }[] = [];
+    for (const pd of profDataResults) {
+      if (pd) profRmpUrls.push({ instructor: pd.instructor, rmpLink: pd.rmp_link });
+    }
+
+    // Scrape RMP for standalone professors
+    const rmpUrlsToScrape = profRmpUrls
+      .filter((p) => p.rmpLink)
+      .map((p) => p.rmpLink);
+    let profRmpScraped: Record<string, unknown> = {};
+    if (rmpUrlsToScrape.length > 0) {
+      try {
+        profRmpScraped = await scrapeRmpProfessors(rmpUrlsToScrape);
+      } catch (e) {
+        console.error("professor RMP scrape error:", e);
+      }
+    }
+
+    for (const pd of profDataResults) {
+      if (!pd) continue;
+      const profId = pd.rmp_link?.split("/").pop() ?? null;
+      const profile = profId ? (profRmpScraped[profId] as Record<string, unknown> | undefined) : undefined;
+      const snap: RmpSnapshot | null = pd.rmp_link
+        ? {
+            instructor: pd.instructor,
+            rmp_link: pd.rmp_link,
+            profId,
+            rating: (profile?.rating as string) ?? "N/A",
+            total_ratings: (profile?.total_ratings as string) ?? "N/A",
+            would_take_again: (profile?.would_take_again as string) ?? "N/A",
+            difficulty: (profile?.difficulty as string) ?? "N/A",
+            top_tags: (profile?.top_tags as string[]) ?? [],
+          }
+        : null;
+
+      professorPrefetches.push({
+        instructor: pd.instructor,
+        department: pd.department,
+        rmp_link: pd.rmp_link,
+        courses: pd.courses,
+        rmpSnapshot: snap,
+      });
+    }
+  }
+
   return {
     selectedCourses,
     selectedProfessorsByCourse,
+    selectedStandaloneProfessors,
     courseSummaries,
     rmpSnapshots,
+    professorPrefetches,
   };
 }
 
@@ -249,6 +405,31 @@ export function renderPrefetchedContext(ctx: PrefetchedContext): string {
       lines.push(
         `- ${snap.instructor}: rating=${snap.rating}, difficulty=${snap.difficulty}, would_take_again=${snap.would_take_again}, tags=[${snap.top_tags.join(", ")}]`
       );
+    }
+  }
+
+  if (ctx.professorPrefetches && ctx.professorPrefetches.length > 0) {
+    lines.push("");
+    lines.push(`## Selected professors (standalone): ${ctx.professorPrefetches.map((p) => p.instructor).join(", ")}`);
+    for (const pp of ctx.professorPrefetches) {
+      lines.push("");
+      lines.push(`### Professor: ${pp.instructor}`);
+      if (pp.department) lines.push(`Department: ${pp.department}`);
+      if (pp.rmpSnapshot) {
+        lines.push(
+          `RMP: rating=${pp.rmpSnapshot.rating}, difficulty=${pp.rmpSnapshot.difficulty}, would_take_again=${pp.rmpSnapshot.would_take_again}, tags=[${pp.rmpSnapshot.top_tags.join(", ")}]`
+        );
+      }
+      if (pp.courses.length > 0) {
+        lines.push(`Courses taught (${pp.courses.length}):`);
+        for (const c of pp.courses) {
+          lines.push(
+            `- ${c.course}: avg_gpa=${c.avg_gpa ?? "N/A"}, sections=${c.sections_count}, terms=${c.terms_count}, latest=${c.latest_term ?? "N/A"}, students=${c.total_students}`
+          );
+        }
+      } else {
+        lines.push("No course data found for this professor.");
+      }
     }
   }
 
